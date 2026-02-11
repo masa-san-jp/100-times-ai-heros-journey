@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: initial commit\n\nヒーローズ・ジャーニーの物語構造に基づいてAIで物語を自動生成するGoogle Colabノートブック。\nOpenAI API連携、12段階の物語構造、キャラクター自動生成機能を含む。\nEOF\n\\)\")",
+      "Bash(git reset:*)",
+      "Bash(git update-ref:*)",
+      "Bash(git commit --amend -m \"$\\(cat <<''EOF''\nfeat: initial commit\n\nヒーローズ・ジャーニーの物語構造に基づいてAIで物語を自動生成するGoogle Colabノートブック。\nOpenAI API連携、12段階の物語構造、キャラクター自動生成機能を含む。\nEOF\n\\)\")"
+    ]
+  }
+}
