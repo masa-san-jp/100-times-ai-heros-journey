@@ -195,7 +195,89 @@ MIT License
 
 masa-jp-art
 
+## ローカル版開発（Ollama + gpt-oss:20b）
+
+### 概要
+
+完全にローカル環境で動作するバージョンを開発中です。Ollamaとgpt-oss:20bモデルを使用することで、外部APIに依存せず、プライバシーを保ちながら物語を生成できます。
+
+### 開発ハーネスの使用方法
+
+開発ハーネスは、ローカル版を安全に開発・テストするためのツールセットです。
+
+#### 1. 前提条件
+
+```bash
+# Ollamaのインストール（macOS）
+brew install ollama
+
+# gpt-oss:20bモデルのダウンロード
+ollama pull gpt-oss:20b
+
+# Ollamaサーバーの起動
+ollama serve
+```
+
+#### 2. 依存関係のインストール
+
+```bash
+cd harness
+pip install -r requirements.txt
+```
+
+#### 3. テストの実行
+
+```bash
+# すべてのテストを実行
+python3 run_all_tests.py
+
+# または、個別にテストを実行
+python3 01_test_ollama_connection.py
+python3 02_test_narrative_analysis.py
+python3 03_test_character_generation.py
+```
+
+#### 4. テスト結果の確認
+
+```bash
+# ログファイルを確認
+cat harness/logs/connection_test.log
+cat harness/logs/narrative_analysis_test.log
+
+# 生成されたテスト出力を確認
+ls -la harness/test_output/
+```
+
+### ドキュメント
+
+- [ローカル版設計仕様書](docs/design-spec-local.md) - 詳細な設計仕様
+- [開発ハーネスREADME](harness/README.md) - ハーネスの詳細な使い方
+
+### 開発状況
+
+- [x] 設計仕様書作成
+- [x] 開発ハーネス作成
+- [x] Ollama接続テスト
+- [x] ナラティブ分析テスト
+- [x] キャラクター生成テスト
+- [ ] プロット生成テスト
+- [ ] 物語執筆テスト
+- [ ] 本番実装
+- [ ] 統合テスト
+
+### 注意事項
+
+⚠️ **開発ファイル**: `harness/` ディレクトリの内容はGitHubにアップロードされません（`.gitignore`で除外設定済み）
+
+⚠️ **ハードウェア要件**:
+- CPU: 8コア以上推奨（Apple M1/M2 推奨）
+- メモリ: 32GB以上推奨
+- ストレージ: 20GB以上（モデル用）
+
+⚠️ **処理時間**: gpt-oss:20bは大規模モデルのため、CPU推論では処理に時間がかかります。
+
 ## 参考文献
 
 - Joseph Campbell『千の顔をもつ英雄』
 - Christopher Vogler『The Writer's Journey: Mythic Structure for Writers』
+- [Ollama 公式ドキュメント](https://ollama.com/)
