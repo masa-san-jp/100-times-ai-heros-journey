@@ -225,32 +225,33 @@ desire:      「全ての人に尊敬され、敬われたい。」
 
 ## 6. コア関数定義
 
-### 6.1 `ai(prompt, model="o3-mini")` — テキスト生成
+### 6.1 `ai(prompt, model="o3-mini", reasoning_effort="medium")` — テキスト生成
 
 OpenAI ChatCompletion APIを使用してテキストを生成する。
 
 ```
-入力:  prompt (str) — AIへの指示文
-       model (str)  — 使用モデル（デフォルト: "o3-mini"）
+入力:  prompt (str)           — AIへの指示文
+       model (str)            — 使用モデル（デフォルト: "o3-mini"）
+       reasoning_effort (str) — 推論レベル（デフォルト: "medium"）
 出力:  str — 生成テキスト
-設定:  reasoning_effort = "medium"
 ```
 
 - `reasoning_effort` は `"low"`, `"medium"`, `"high"` から選択可能
+- タスク種別に応じて `REASONING_CONFIG` 辞書から適切な値を渡す（後述 6.6 参照）
 - エラー発生時は `"エラーが発生しました: {エラー内容}"` を返す
 
-### 6.2 `ai_list(prompt, model="o3-mini")` — JSON構造化データ生成
+### 6.2 `ai_list(prompt, model="o3-mini", reasoning_effort="medium")` — JSON構造化データ生成
 
 OpenAI ChatCompletion APIを使用してJSON形式の構造化データを生成する。
 
 ```
-入力:  prompt (str) — AIへの指示文
-       model (str)  — 使用モデル（デフォルト: "o3-mini"）
+入力:  prompt (str)           — AIへの指示文
+       model (str)            — 使用モデル（デフォルト: "o3-mini"）
+       reasoning_effort (str) — 推論レベル（デフォルト: "medium"）
 出力:  dict — JSON形式のデータ（辞書型）
 設定:  response_format = {"type": "json_object"}
        system message = "常にJSON形式で応答してください"
        user suffix = "\nJSON形式で答えろ"
-       reasoning_effort = "medium"
 ```
 
 ### 6.3 `claude(prompt)` — 文学的テキスト生成
@@ -277,7 +278,35 @@ DeepSeek APIを使用してテキストを生成する（代替モデル）。
 設定:  api_base = "https://api.deepseek.com"
 ```
 
-### 6.5 ユーティリティ関数
+### 6.5 タスク別 reasoning_effort 設定（`REASONING_CONFIG`）
+
+タスクの複雑さに応じて `reasoning_effort` を最適化するための設定辞書。ノートブックの Cell 3 先頭で定義される。
+
+```python
+REASONING_CONFIG = {
+    "analysis":        "high",    # ナラティブ分析（願望/抑圧/葛藤）
+    "narrative":       "high",    # ナラティブ要素抽出
+    "element_pool":    "low",     # 要素プール生成（wants/abilities/roles）
+    "plot_classify":   "low",     # プロット形式分類
+    "character":       "medium",  # キャラクター生成
+    "plot":            "medium",  # プロット生成
+    "visual":          "low",     # ビジュアルプロンプト
+    "world":           "medium",  # 世界観生成
+    "plot_skeleton":   "medium",  # プロット骨子(A-E)
+    "integrated_plot": "high",    # 統合プロット
+    "default":         "medium",  # デフォルト
+}
+```
+
+**適用方針:**
+
+| reasoning_effort | 適用タスク | 理由 |
+|---|---|---|
+| `"high"` | ナラティブ分析、ナラティブ要素抽出、統合プロット | 深い分析・複雑な構造把握が必要 |
+| `"medium"` | キャラクター生成、プロット生成、世界観生成、プロット骨子 | バランスの取れた品質が必要 |
+| `"low"` | 要素プール(100個)、プロット形式分類、ビジュアルプロンプト | 大量生成・単純変換タスク |
+
+### 6.6 ユーティリティ関数
 
 | 関数 | 入力 | 出力 | 説明 |
 |---|---|---|---|
@@ -316,7 +345,7 @@ openai.api_key = "YOUR_DEEPSEEK_API_KEY"
 
 ### 7.3 モデル選択ガイドライン
 
-- **分析・JSON出力:** `o3-mini`（reasoning_effort調整可能、JSON応答対応）
+- **分析・JSON出力:** `o3-mini`（`REASONING_CONFIG` によるタスク別 reasoning_effort 調整、JSON応答対応）
 - **文学的執筆:** `claude-3-5-sonnet`（temperature=1で最大の創造性、最大4000トークン）
 - **高精度推論:** `deepseek-reasoner`（オプション）
 
