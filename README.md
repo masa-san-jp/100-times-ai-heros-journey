@@ -248,6 +248,40 @@ cat harness/logs/narrative_analysis_test.log
 ls -la harness/test_output/
 ```
 
+#### 5. 本番実装の使用
+
+```bash
+# 依存関係のインストール
+pip install -r requirements.txt
+
+# 使用例の実行
+python3 example.py
+```
+
+**コード例:**
+
+```python
+from src.ollama_client import OllamaConfig
+from src.narrative_analyzer import NarrativeInput
+from src.story_generator import StoryGenerator
+
+# ナラティブ入力を準備
+narrative = NarrativeInput(
+    author="あなたの自己紹介",
+    missing="欠けているもの",
+    status="現在の状態",
+    # ... 他の項目
+)
+
+# 物語生成
+generator = StoryGenerator()
+story = generator.generate(narrative, plot_type="旅 (Quest)")
+
+# 保存
+story_path = generator.save_story(story)
+print(f"物語を保存: {story_path}")
+```
+
 ### ドキュメント
 
 - [ローカル版設計仕様書](docs/design-spec-local.md) - 詳細な設計仕様
@@ -260,10 +294,11 @@ ls -la harness/test_output/
 - [x] Ollama接続テスト
 - [x] ナラティブ分析テスト
 - [x] キャラクター生成テスト
-- [ ] プロット生成テスト
-- [ ] 物語執筆テスト
-- [ ] 本番実装
+- [x] プロット生成テスト
+- [x] 物語執筆テスト
+- [x] 本番実装（src/ディレクトリ）
 - [ ] 統合テスト
+- [ ] Jupyter Notebook作成
 
 ### 注意事項
 

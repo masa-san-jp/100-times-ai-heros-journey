@@ -1,0 +1,8 @@
+# 100 Times AI Hero's Journey - Local Edition
+# Production dependencies
+
+# HTTP client for Ollama API
+requests>=2.31.0
+
+# Data validation (optional, for future enhancements)
+# pydantic>=2.5.0
