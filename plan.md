@@ -13,12 +13,14 @@
 
 ### 対象関数と呼び出し箇所
 
-| 関数 | 定義箇所 | reasoning_effort |
-|------|----------|------------------|
-| `ai(prompt, model)` | Cell 3 (L160) | `"medium"` ハードコード |
-| `ai_list(prompt, model)` | Cell 3 (L174) | `"medium"` ハードコード |
-| `claude(prompt)` | Cell 12 (L20936) | なし（Anthropic APIは別パラメータ） |
-| `dsr1(prompt, model)` | Cell 15 (L21567) | なし |
+| 関数 | 定義箇所 | デフォルトモデル | reasoning_effort |
+|------|----------|-----------------|------------------|
+| `ai(prompt, model)` | Cell 3 (L160) | `gpt-oss:20b` | `"medium"` ハードコード |
+| `ai_list(prompt, model)` | Cell 3 (L174) | `gpt-oss:20b` | `"medium"` ハードコード |
+| `claude(prompt)` | Cell 12 (L20936) | `claude-3-5-sonnet-20241022` | なし（Anthropic APIは別パラメータ） |
+| `dsr1(prompt, model)` | Cell 15 (L21567) | `deepseek-reasoner` | なし |
+
+> **注意:** デフォルトモデルは既に `o3-mini` → `gpt-oss:20b` に移行済み。本実装でもこれを前提とする。
 
 ---
 
@@ -30,11 +32,11 @@
 
 ```python
 # Before
-def ai(prompt, model="o3-mini"):
+def ai(prompt, model="gpt-oss:20b"):
     # reasoning_effort="medium" がハードコード
 
 # After
-def ai(prompt, model="o3-mini", reasoning_effort="medium"):
+def ai(prompt, model="gpt-oss:20b", reasoning_effort="medium"):
     # 引数で制御可能に
 ```
 
