@@ -4,10 +4,14 @@
 ナラティブ要素からキャラクターを生成
 """
 
+import re
+import logging
 import random
 from typing import List
 from dataclasses import dataclass
 from .ollama_client import OllamaClient
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -82,9 +86,13 @@ class CharacterGenerator:
         selected_elements = self._select_elements(narrative_elements)
 
         # 各キャラクターを生成
+        logger.info("主人公を生成中")
         protagonist = self._generate_protagonist(selected_elements, plot_type)
+        logger.info("使者を生成中")
         messenger = self._generate_messenger(protagonist)
+        logger.info("援助者を生成中")
         supporter = self._generate_supporter(protagonist)
+        logger.info("敵対者を生成中")
         adversary = self._generate_adversary(protagonist)
 
         return CharacterSet(
@@ -99,10 +107,11 @@ class CharacterGenerator:
         if len(narrative_elements) < 3:
             raise ValueError("Not enough narrative elements")
 
+        selected = random.sample(narrative_elements, 3)
         return {
-            "narrative": random.choice(narrative_elements),
-            "want": random.choice(narrative_elements),
-            "ability": random.choice(narrative_elements)
+            "narrative": selected[0],
+            "want": selected[1],
+            "ability": selected[2]
         }
 
     def _generate_protagonist(
@@ -241,9 +250,12 @@ class CharacterGenerator:
             if not line:
                 continue
 
-            # 名前の抽出
-            if line.startswith("名前:") or line.startswith("Name:"):
-                name = line.split(":", 1)[1].strip()
+            # 名前の抽出（全角コロン・Markdown太字に対応）
+            line_clean = line.replace("：", ":").strip()
+            line_clean = re.sub(r'\*+', '', line_clean).strip()
+
+            if line_clean.startswith("名前:") or line_clean.startswith("Name:"):
+                name = line_clean.split(":", 1)[1].strip()
                 found_name = True
                 continue
 

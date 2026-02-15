@@ -4,9 +4,13 @@
 全体のフローを制御するメインクラス
 """
 
-from typing import List, Optional
+import logging
+from datetime import datetime
+from typing import List, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from .ollama_client import OllamaClient, OllamaConfig
 from .narrative_analyzer import NarrativeAnalyzer, NarrativeInput, NarrativeAnalysis
@@ -18,7 +22,7 @@ from .plot_generator import PlotGenerator, Plot, PlotStage
 class Story:
     """完成した物語（イミュータブル）"""
     title: str
-    chapters: List[str]  # 各章の本文
+    chapters: Tuple[str, ...]  # 各章の本文
     characters: CharacterSet
     plot: Plot
     narrative_analysis: NarrativeAnalysis
@@ -66,27 +70,35 @@ class StoryGenerator:
             raise ValueError("plot_type must be provided")
 
         # ステップ1: ナラティブ分析
+        logger.info("ステップ1: ナラティブ分析を開始")
         narrative_analysis = self.narrative_analyzer.analyze(narrative)
+        logger.info("ステップ1: ナラティブ分析が完了")
 
         # ステップ2: キャラクター生成
+        logger.info("ステップ2: キャラクター生成を開始")
         characters = self.character_generator.generate(
             narrative_elements=narrative_analysis.elements,
             plot_type=plot_type
         )
 
         # ステップ3: プロット生成
+        logger.info("ステップ3: プロット生成を開始")
         plot = self.plot_generator.generate(characters)
+        logger.info("ステップ3: プロット生成が完了")
 
         # ステップ4: 各章を執筆
+        logger.info("ステップ4: 各章の執筆を開始")
         chapters = self._write_chapters(plot, characters)
+        logger.info("ステップ4: 全%d章の執筆が完了", len(chapters))
 
         # ステップ5: タイトル生成
+        logger.info("ステップ5: タイトル生成を開始")
         title_candidates = self.plot_generator.generate_title(characters, plot)
         title = title_candidates[0] if title_candidates else "無題"
 
         return Story(
             title=title,
-            chapters=chapters,
+            chapters=tuple(chapters),
             characters=characters,
             plot=plot,
             narrative_analysis=narrative_analysis
@@ -112,6 +124,7 @@ class StoryGenerator:
 
         for stage in plot.stages:
             # 章を執筆
+            logger.info("第%d章「%s」を執筆中", stage.stage, stage.name)
             chapter = self.plot_generator.generate_chapter(
                 stage=stage,
                 characters=characters,
@@ -146,10 +159,11 @@ class StoryGenerator:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        # ファイル名を生成（タイトルから）
+        # ファイル名を生成（タイムスタンプ＋タイトル）
         safe_title = "".join(c for c in story.title if c.isalnum() or c in (" ", "_", "-"))
         safe_title = safe_title[:50]  # 最大50文字
-        filename = f"{safe_title}.md"
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{safe_title}.md"
         file_path = output_path / filename
 
         # Markdown形式で保存

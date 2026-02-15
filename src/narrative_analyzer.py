@@ -4,9 +4,12 @@
 作家の自己ナラティブを分析し、物語要素を抽出
 """
 
-from typing import Dict, List
+import logging
+from typing import Dict, List, Tuple
 from dataclasses import dataclass
 from .ollama_client import OllamaClient
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -51,7 +54,7 @@ class NarrativeAnalysis:
     desire: str  # 願望分析
     suppression: str  # 抑圧分析
     conflict: str  # 葛藤分析
-    elements: List[str]  # ナラティブ要素（10個）
+    elements: Tuple[str, ...]  # ナラティブ要素（最大10個）
 
 
 class NarrativeAnalyzer:
@@ -83,16 +86,22 @@ class NarrativeAnalyzer:
 
         narrative_text = narrative.to_text()
 
+        logger.info("ナラティブ分析を開始")
+
         # 願望分析
+        logger.info("願望分析を開始")
         desire = self._analyze_desire(narrative_text)
 
         # 抑圧分析
+        logger.info("抑圧分析を開始")
         suppression = self._analyze_suppression(narrative_text)
 
         # 葛藤分析
+        logger.info("葛藤分析を開始")
         conflict = self._analyze_conflict(narrative_text)
 
         # ナラティブ要素抽出
+        logger.info("ナラティブ要素の抽出を開始")
         elements = self._extract_elements(desire, suppression, conflict)
 
         return NarrativeAnalysis(
@@ -152,9 +161,9 @@ class NarrativeAnalyzer:
 要素を抽象化して、10個に分類してリストnarrativeに格納してください。
 
 分析結果:
-- 願望: {desire[:200]}...
-- 抑圧: {suppression[:200]}...
-- 葛藤: {conflict[:200]}...
+- 願望: {desire}
+- 抑圧: {suppression}
+- 葛藤: {conflict}
 
 出力形式: {{"narrative": ["要素1", "要素2", ..., "要素10"]}}"""
 
@@ -165,7 +174,7 @@ class NarrativeAnalyzer:
 
         elements = result.get("narrative", [])
 
-        if not isinstance(elements, list) or len(elements) != 10:
-            raise ValueError(f"Expected 10 narrative elements, got {len(elements)}")
+        if not isinstance(elements, list) or len(elements) == 0:
+            raise ValueError("No narrative elements returned")
 
-        return elements
+        return tuple(elements[:10])
