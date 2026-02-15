@@ -4,10 +4,13 @@
 ヒーローズ・ジャーニー11段階に基づいたプロット生成
 """
 
-from typing import List
+import logging
+from typing import List, Tuple
 from dataclasses import dataclass
 from .ollama_client import OllamaClient
 from .character_generator import CharacterSet
+
+logger = logging.getLogger(__name__)
 
 
 # ヒーローズ・ジャーニー11段階の定義
@@ -38,7 +41,7 @@ class PlotStage:
 @dataclass(frozen=True)
 class Plot:
     """プロット（イミュータブル）"""
-    stages: List[PlotStage]
+    stages: Tuple[PlotStage, ...]
     outline: str
 
     def to_text(self) -> str:
@@ -80,12 +83,14 @@ class PlotGenerator:
             raise ValueError("characters must be CharacterSet instance")
 
         # プロット構造を生成（JSON）
+        logger.info("プロット構造を生成中")
         stages = self._generate_structure(characters)
 
         # 統合アウトラインを生成
+        logger.info("プロットアウトラインを生成中")
         outline = self._generate_outline(characters)
 
-        return Plot(stages=stages, outline=outline)
+        return Plot(stages=tuple(stages), outline=outline)
 
     def _generate_structure(self, characters: CharacterSet) -> List[PlotStage]:
         """プロット構造を生成"""
@@ -121,8 +126,19 @@ class PlotGenerator:
 
         stages_data = result.get("stages", [])
 
-        if len(stages_data) != 11:
-            raise ValueError(f"Expected 11 stages, got {len(stages_data)}")
+        if len(stages_data) == 0:
+            raise ValueError("No stages returned")
+
+        stages_data = stages_data[:11]
+
+        # 不足分をJOURNEY_STAGESの定義から補完
+        for i in range(len(stages_data), 11):
+            stage_def = JOURNEY_STAGES[i]
+            stages_data.append({
+                "stage": stage_def["stage"],
+                "name": stage_def["name"],
+                "description": f"{stage_def['name']}の展開"
+            })
 
         # PlotStageオブジェクトのリストに変換
         stages = []
@@ -287,7 +303,7 @@ class PlotGenerator:
 
         titles_data = result.get("titles", [])
 
-        if len(titles_data) != 3:
-            raise ValueError(f"Expected 3 titles, got {len(titles_data)}")
+        if len(titles_data) == 0:
+            raise ValueError("No titles returned")
 
-        return [t.get("title", "") for t in titles_data]
+        return [t.get("title", "") for t in titles_data[:3]]

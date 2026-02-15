@@ -4,10 +4,13 @@ Ollama APIクライアント
 Ollama APIとの通信を担当するクライアントクラス
 """
 
+import logging
 import requests
 import json
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -55,19 +58,90 @@ class OllamaClient:
         Raises:
             OllamaClientError: API呼び出しに失敗した場合
         """
+        self._validate_params(prompt, temperature)
+
+        use_model = model or self.config.model
+        logger.info("chat: model=%s, temperature=%.1f", use_model, temperature)
+
+        messages = self._build_messages(system, prompt)
+        payload = self._build_payload(
+            messages=messages,
+            temperature=temperature,
+            model=use_model
+        )
+
+        return self._request(payload)
+
+    def chat_json(
+        self,
+        prompt: str,
+        system: str = "",
+        temperature: float = 0.3,
+        model: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        JSON形式でデータ生成
+
+        Args:
+            prompt: ユーザープロンプト
+            system: システムプロンプト
+            temperature: 生成の創造性（デフォルト0.3で精度重視）
+            model: 使用モデル
+
+        Returns:
+            JSON形式のデータ（辞書型）
+
+        Raises:
+            OllamaClientError: API呼び出しまたはJSONパースに失敗した場合
+        """
+        self._validate_params(prompt, temperature)
+
+        use_model = model or self.config.model
+        logger.info("chat_json: model=%s, temperature=%.1f", use_model, temperature)
+
+        # JSON生成用のシステムプロンプト
+        json_system = "常にJSON形式で応答してください。出力はJSONのみで、説明文は含めないでください。"
+        if system:
+            json_system = f"{json_system}\n\n{system}"
+
+        messages = self._build_messages(json_system, prompt)
+        payload = self._build_payload(
+            messages=messages,
+            temperature=temperature,
+            model=use_model,
+            format_json=True
+        )
+
+        content = self._request(payload)
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            raise OllamaClientError(
+                f"Failed to parse JSON response: {e}\nContent: {content[:200]}"
+            )
+
+    def _validate_params(self, prompt: str, temperature: float) -> None:
+        """パラメータのバリデーション"""
         if not prompt or not isinstance(prompt, str):
             raise ValueError("prompt must be a non-empty string")
 
         if not isinstance(temperature, (int, float)) or temperature < 0 or temperature > 2:
             raise ValueError("temperature must be between 0.0 and 2.0")
 
-        messages = self._build_messages(system, prompt)
-        payload = self._build_payload(
-            messages=messages,
-            temperature=temperature,
-            model=model or self.config.model
-        )
+    def _request(self, payload: Dict[str, Any]) -> str:
+        """
+        Ollama APIにリクエストを送信し、レスポンスのcontentを返す
 
+        Args:
+            payload: APIペイロード
+
+        Returns:
+            レスポンスのcontent文字列
+
+        Raises:
+            OllamaClientError: API呼び出しに失敗した場合
+        """
         try:
             response = requests.post(
                 f"{self.config.base_url}/api/chat",
@@ -94,83 +168,11 @@ class OllamaClient:
             )
         except requests.exceptions.HTTPError as e:
             raise OllamaClientError(f"HTTP error: {e}")
+        except OllamaClientError:
+            raise
         except json.JSONDecodeError:
             raise OllamaClientError("Invalid JSON response from server")
         except Exception as e:
-            raise OllamaClientError(f"Unexpected error: {e}")
-
-    def chat_json(
-        self,
-        prompt: str,
-        system: str = "",
-        temperature: float = 0.3,
-        model: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        JSON形式でデータ生成
-
-        Args:
-            prompt: ユーザープロンプト
-            system: システムプロンプト
-            temperature: 生成の創造性（デフォルト0.3で精度重視）
-            model: 使用モデル
-
-        Returns:
-            JSON形式のデータ（辞書型）
-
-        Raises:
-            OllamaClientError: API呼び出しまたはJSONパースに失敗した場合
-        """
-        if not prompt or not isinstance(prompt, str):
-            raise ValueError("prompt must be a non-empty string")
-
-        # JSON生成用のシステムプロンプト
-        json_system = "常にJSON形式で応答してください。出力はJSONのみで、説明文は含めないでください。"
-        if system:
-            json_system = f"{json_system}\n\n{system}"
-
-        messages = self._build_messages(json_system, prompt)
-        payload = self._build_payload(
-            messages=messages,
-            temperature=temperature,
-            model=model or self.config.model,
-            format_json=True
-        )
-
-        try:
-            response = requests.post(
-                f"{self.config.base_url}/api/chat",
-                json=payload,
-                timeout=self.config.timeout
-            )
-            response.raise_for_status()
-
-            result = response.json()
-            content = result.get("message", {}).get("content", "")
-
-            if not content:
-                raise OllamaClientError("Empty response from Ollama API")
-
-            # JSONパース
-            try:
-                parsed_json = json.loads(content)
-                return parsed_json
-            except json.JSONDecodeError as e:
-                raise OllamaClientError(f"Failed to parse JSON response: {e}\nContent: {content[:200]}")
-
-        except requests.exceptions.Timeout:
-            raise OllamaClientError(
-                f"Request timeout after {self.config.timeout} seconds"
-            )
-        except requests.exceptions.ConnectionError:
-            raise OllamaClientError(
-                f"Failed to connect to Ollama server at {self.config.base_url}"
-            )
-        except requests.exceptions.HTTPError as e:
-            raise OllamaClientError(f"HTTP error: {e}")
-        except Exception as e:
-            if isinstance(e, OllamaClientError):
-                raise
             raise OllamaClientError(f"Unexpected error: {e}")
 
     def _build_messages(self, system: str, prompt: str) -> List[Dict[str, str]]:
@@ -192,8 +194,10 @@ class OllamaClient:
         payload = {
             "model": model,
             "messages": messages,
-            "temperature": temperature,
-            "stream": False
+            "stream": False,
+            "options": {
+                "temperature": temperature
+            }
         }
 
         if format_json:
