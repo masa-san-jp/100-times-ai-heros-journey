@@ -3,7 +3,7 @@
 import dataclasses
 import pytest
 
-from src.ollama_client import OllamaConfig
+from src.ollama_client import OllamaConfig, AVAILABLE_MODELS, DEFAULT_MODEL
 from src.narrative_analyzer import NarrativeInput, NarrativeAnalysis
 from src.character_generator import Character, CharacterSet
 from src.plot_generator import PlotStage, Plot, JOURNEY_STAGES
@@ -161,3 +161,37 @@ class TestOllamaConfig:
         config = OllamaConfig()
         with pytest.raises(dataclasses.FrozenInstanceError):
             config.model = "other"
+
+
+# === AVAILABLE_MODELS / DEFAULT_MODEL ===
+
+class TestAvailableModels:
+    def test_default_model_is_gpt_oss_20b(self):
+        assert DEFAULT_MODEL == "gpt-oss:20b"
+
+    def test_default_model_matches_config_default(self):
+        assert OllamaConfig().model == DEFAULT_MODEL
+
+    def test_standard_category_contains_default(self):
+        assert DEFAULT_MODEL in AVAILABLE_MODELS["standard"]
+
+    def test_quantized_category_exists(self):
+        assert "quantized" in AVAILABLE_MODELS
+        assert len(AVAILABLE_MODELS["quantized"]) > 0
+
+    def test_quantized_models_are_20b_variants(self):
+        for model in AVAILABLE_MODELS["quantized"]:
+            assert "20b" in model, f"Expected 20b quantized model, got: {model}"
+            assert "gpt-oss" in model
+
+    def test_high_performance_category_exists(self):
+        assert "high_performance" in AVAILABLE_MODELS
+        assert len(AVAILABLE_MODELS["high_performance"]) > 0
+
+    def test_high_performance_contains_120b(self):
+        assert any("120b" in m for m in AVAILABLE_MODELS["high_performance"])
+
+    def test_all_model_names_are_strings(self):
+        for category, models in AVAILABLE_MODELS.items():
+            for model in models:
+                assert isinstance(model, str), f"Model name must be str: {model}"

@@ -13,11 +13,45 @@ from dataclasses import dataclass
 logger = logging.getLogger(__name__)
 
 
+# 利用可能なモデル一覧
+# ローカル実行で使用できるモデルをカテゴリ別に整理
+AVAILABLE_MODELS = {
+    "standard": [
+        # 標準モデル（デフォルト推奨）
+        # 必要メモリ: 約15GB RAM
+        "gpt-oss:20b",
+    ],
+    "quantized": [
+        # 量子化版モデル（メモリ節約・高速化が必要な場合に選択可能）
+        # Q8_0: ほぼ同等品質、約12GB RAM
+        "gpt-oss:20b-q8_0",
+        # Q5_K_M: バランス型、約8GB RAM
+        "gpt-oss:20b-q5_K_M",
+        # Q4_K_M: メモリ効率重視、約7GB RAM（品質はやや低下）
+        "gpt-oss:20b-q4_K_M",
+        # Q4_0: 最小メモリ構成、約6GB RAM
+        "gpt-oss:20b-q4_0",
+    ],
+    "high_performance": [
+        # 高性能モデル（高スペックマシン向け）
+        # gpt-oss:120b: 最高品質、約80GB RAM 以上推奨
+        "gpt-oss:120b",
+        # Q8_0: 高品質+やや省メモリ、約65GB RAM
+        "gpt-oss:120b-q8_0",
+        # Q4_K_M: 省メモリ高性能、約45GB RAM
+        "gpt-oss:120b-q4_K_M",
+    ],
+}
+
+# デフォルトモデル
+DEFAULT_MODEL = "gpt-oss:20b"
+
+
 @dataclass(frozen=True)
 class OllamaConfig:
     """Ollama設定（イミュータブル）"""
     base_url: str = "http://localhost:11434"
-    model: str = "gpt-oss:20b"
+    model: str = DEFAULT_MODEL
     timeout: int = 300
 
 
