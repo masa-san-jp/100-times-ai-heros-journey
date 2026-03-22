@@ -199,7 +199,64 @@ masa-jp-art
 
 ### 概要
 
-完全にローカル環境で動作するバージョンを開発中です。Ollamaとgpt-oss:20bモデルを使用することで、外部APIに依存せず、プライバシーを保ちながら物語を生成できます。
+完全にローカル環境で動作するバージョンです。Ollamaとgpt-oss:20bモデルを使用することで、外部APIに依存せず、プライバシーを保ちながら物語を生成できます。
+
+### モデル選択ガイド
+
+ローカル版では目的・マシンスペックに応じてモデルを選択できます。
+
+| モデル | 種別 | 推奨メモリ | 用途 |
+|---|---|---|---|
+| **`gpt-oss:20b`** | 標準（**デフォルト**） | 約15GB | バランス重視・推奨 |
+| `gpt-oss:20b-q8_0` | 量子化版 (Q8) | 約12GB | ほぼ同等品質・省メモリ |
+| `gpt-oss:20b-q5_K_M` | 量子化版 (Q5) | 約8GB | バランス型 |
+| `gpt-oss:20b-q4_K_M` | 量子化版 (Q4) | 約7GB | メモリ効率重視 |
+| `gpt-oss:20b-q4_0` | 量子化版 (Q4) | 約6GB | 最小メモリ構成 |
+| `gpt-oss:120b` | 高性能 | 約80GB以上 | 最高品質・高スペック機向け |
+| `gpt-oss:120b-q4_K_M` | 高性能量子化版 | 約45GB | 省メモリ高性能版 |
+
+> **量子化版について**: Q数が低いほどメモリ使用量は小さくなりますが、生成品質はやや低下します。RAM が16GB未満の場合は `q4_K_M` や `q4_0` をお試しください。
+
+> **`gpt-oss:120b` について**: より高精度な物語生成が必要な高スペックマシン（64GB RAM 以上推奨）向けです。デフォルトは引き続き `gpt-oss:20b` です。
+
+モデルを変更するには `OllamaConfig` の `model=` 引数を指定します:
+
+```python
+from src.ollama_client import OllamaConfig, AVAILABLE_MODELS
+
+# 量子化版を使用（メモリ節約）
+config = OllamaConfig(model="gpt-oss:20b-q4_K_M")
+
+# 高性能マシン向け
+config = OllamaConfig(model="gpt-oss:120b")
+
+# 利用可能なモデル一覧を確認
+print(AVAILABLE_MODELS)
+```
+
+### 出力ディレクトリ構造
+
+何度も実行してアイデアを探索するプロジェクト用途を想定し、実行ごとに一意のディレクトリへ出力を保存します。
+
+```
+output/
+├── run_20250315_120530/       ← 1回目の実行
+│   ├── 20250315_120530_タイトル.md   （物語）
+│   └── narrative_analysis.md         （ナラティブ分析）
+├── run_20250315_145200/       ← 2回目の実行
+│   ├── 20250315_145200_タイトル.md
+│   └── narrative_analysis.md
+└── ...
+```
+
+`save_run()` メソッドを使うと、物語と分析結果が同じ実行ディレクトリに一括保存されます:
+
+```python
+run_dir = generator.save_run(story)
+print(f"保存先: {run_dir}/")
+```
+
+従来の `save_story()` / `save_analysis()` も引き続き利用できます（後方互換性あり）。
 
 ### 開発ハーネスの使用方法
 
@@ -277,9 +334,9 @@ narrative = NarrativeInput(
 generator = StoryGenerator()
 story = generator.generate(narrative, plot_type="旅 (Quest)")
 
-# 保存
-story_path = generator.save_story(story)
-print(f"物語を保存: {story_path}")
+# 実行ごとのディレクトリに保存（output/run_YYYYMMDD_HHMMSS/ が自動作成されます）
+run_dir = generator.save_run(story)
+print(f"保存先: {run_dir}/")
 ```
 
 ### ドキュメント
@@ -306,8 +363,9 @@ print(f"物語を保存: {story_path}")
 
 ⚠️ **ハードウェア要件**:
 - CPU: 8コア以上推奨（Apple M1/M2 推奨）
-- メモリ: 32GB以上推奨
+- メモリ: 32GB以上推奨（gpt-oss:20b 標準版）、量子化版 (q4_K_M) は 16GB でも動作可能
 - ストレージ: 20GB以上（モデル用）
+- **gpt-oss:120b を使用する場合**: 64GB RAM 以上を推奨
 
 ⚠️ **処理時間**: gpt-oss:20bは大規模モデルのため、CPU推論では処理に時間がかかります。
 

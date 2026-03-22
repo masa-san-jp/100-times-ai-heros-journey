@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
 """
 使用例: 物語生成の基本的な流れ
+
+モデル選択ガイド:
+  標準（デフォルト）:
+    gpt-oss:20b          - 推奨。バランスの取れた品質と速度（約15GB RAM）
+
+  量子化版（メモリ節約・高速化が必要な場合）:
+    gpt-oss:20b-q8_0     - ほぼ同等品質（約12GB RAM）
+    gpt-oss:20b-q5_K_M   - バランス型（約8GB RAM）
+    gpt-oss:20b-q4_K_M   - メモリ効率重視（約7GB RAM）
+    gpt-oss:20b-q4_0     - 最小メモリ構成（約6GB RAM）
+
+  高性能マシン向け（64GB RAM 以上を推奨）:
+    gpt-oss:120b         - 最高品質（約80GB RAM）
+    gpt-oss:120b-q4_K_M  - 省メモリ高性能版（約45GB RAM）
 """
 
-from src.ollama_client import OllamaConfig
+from src.ollama_client import OllamaConfig, AVAILABLE_MODELS
 from src.narrative_analyzer import NarrativeInput
 from src.story_generator import StoryGenerator
 
@@ -28,11 +42,13 @@ def main():
         desire="全ての人に尊敬され、敬われたい。"
     )
 
-    # ステップ2: Ollama設定（オプション）
+    # ステップ2: Ollama設定
+    # デフォルトは gpt-oss:20b。他のモデルに変更するには model= を書き換えてください。
+    # 利用可能モデル一覧は AVAILABLE_MODELS を参照（from src.ollama_client import AVAILABLE_MODELS）
     config = OllamaConfig(
         base_url="http://localhost:11434",
-        model="gpt-oss:20b",
-        timeout=600  # 物語生成は時間がかかるので10分
+        model="gpt-oss:20b",    # 変更例: "gpt-oss:20b-q4_K_M" や "gpt-oss:120b"
+        timeout=600             # 物語生成は時間がかかるので10分
     )
 
     # ステップ3: StoryGeneratorを初期化
@@ -40,6 +56,7 @@ def main():
 
     # ステップ4: 物語を生成
     print("物語生成を開始します...")
+    print(f"モデル: {config.model}")
     print("（処理時間: 約5-10分）")
     print()
 
@@ -49,18 +66,18 @@ def main():
             plot_type="旅 (Quest)"
         )
 
-        # ステップ5: 結果を保存
+        # ステップ5: 結果を実行ごとのディレクトリに保存
+        # output/run_YYYYMMDD_HHMMSS/ ディレクトリを自動作成し、
+        # 物語と分析結果をそれぞれ保存します。
+        # 繰り返し実行するたびに新しいディレクトリが作られるため、
+        # 過去の結果を上書きせずにアイデア探索できます。
         print(f"タイトル: {story.title}")
         print(f"章数: {len(story.chapters)}章")
         print(f"総文字数: {sum(len(c) for c in story.chapters)}文字")
         print()
 
-        # ファイルに保存
-        story_path = generator.save_story(story)
-        print(f"✓ 物語を保存しました: {story_path}")
-
-        analysis_path = generator.save_analysis(story.narrative_analysis)
-        print(f"✓ 分析結果を保存しました: {analysis_path}")
+        run_dir = generator.save_run(story)
+        print(f"✓ 実行結果を保存しました: {run_dir}/")
 
         print("\n完了しました！")
 

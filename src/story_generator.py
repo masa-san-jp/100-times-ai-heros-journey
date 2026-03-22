@@ -139,6 +139,45 @@ class StoryGenerator:
 
         return chapters
 
+    def save_run(self, story: Story, base_dir: str = "output") -> Path:
+        """
+        物語と分析結果を実行ごとのディレクトリに保存
+
+        各実行を一意のタイムスタンプ付きディレクトリへ保存するため、
+        繰り返し実行してアイデアを探索する際に過去の結果と混在しません。
+
+        出力構造例:
+            output/
+            ├── run_20250315_120530/
+            │   ├── story.md
+            │   └── analysis.md
+            └── run_20250315_145200/
+                ├── story.md
+                └── analysis.md
+
+        Args:
+            story: 物語
+            base_dir: 基底出力ディレクトリ（デフォルト: "output"）
+
+        Returns:
+            実行ディレクトリのパス（run_YYYYMMDD_HHMMSS 形式）
+
+        Raises:
+            ValueError: 引数が不正な場合
+            IOError: ファイル保存に失敗した場合
+        """
+        if not isinstance(story, Story):
+            raise ValueError("story must be Story instance")
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_dir = Path(base_dir) / f"run_{timestamp}"
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        self.save_story(story, output_dir=str(run_dir))
+        self.save_analysis(story.narrative_analysis, output_dir=str(run_dir))
+
+        return run_dir
+
     def save_story(self, story: Story, output_dir: str = "output/stories") -> Path:
         """
         物語をファイルに保存
