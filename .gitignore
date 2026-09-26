@@ -1,4 +1,5 @@
 # Python
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -47,6 +48,7 @@ data/
 *.sqlite3
 
 # 設定ファイル（ローカル環境固有）
+.claude/settings.local.json
 config/local_settings.json
 config/*.local.json
 .env
