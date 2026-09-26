@@ -5,7 +5,7 @@ from pathlib import Path
 
 from run_pipeline import load_narrative
 from src.narrative_analyzer import NarrativeInput
-from src.narrative_interview import NARRATIVE_FIELDS, run_interview
+from src.narrative_interview import NARRATIVE_FIELDS, NARRATIVE_QUESTIONS, run_interview
 
 
 def _scripted_input(values, prompts):
@@ -24,6 +24,11 @@ def _scripted_input(values, prompts):
 def _single_line_answers(values=None):
     values = values or {key: f"回答-{key}" for key in NARRATIVE_FIELDS}
     return [item for key in NARRATIVE_FIELDS for item in (values[key], ".")]
+
+
+def test_all_narrative_questions_have_labels():
+    assert len(NARRATIVE_QUESTIONS) == 13
+    assert all(question.label for question in NARRATIVE_QUESTIONS)
 
 
 def test_all_answers_are_saved_and_loadable(tmp_path: Path):
