@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
+from .narrative_interview import NARRATIVE_QUESTIONS
+
 
 SUMMARY_KEYS = (
     "protagonist_desire",
@@ -37,6 +39,7 @@ MIN_ESTIMATED_BODY_CHARS = 200
 TRUNCATION_MARKER = (
     "\n\n[本文はコンテキスト上限の目安に合わせ、冒頭と末尾を残して中略しています]\n\n"
 )
+NARRATIVE_LABELS = {item.key: item.label for item in NARRATIVE_QUESTIONS}
 
 
 class BatchAnalysisError(RuntimeError):
@@ -472,11 +475,15 @@ def _integration_prompt(
         {"run": run.name, **dict(summary)}
         for run, summary in zip(runs, summaries)
     ]
+    labelled_narrative = {
+        NARRATIVE_LABELS.get(key, key): value for key, value in narrative.items()
+    }
     return f"""次の作品要約を横断して、繰り返し現れるパターンを最大7件抽出してください。
 
 {DESIGN_PRINCIPLE}
-元ナラティブとの関係は、必ず問いの形の1文にしてください。問いは、元ナラティブの項目名
-（例: 「失うのが怖いもの」「本当の願望」「日常」）に触れ、実例から考えられる問いとして書きます。
+元ナラティブとの関係は、必ず問いの形の1文にしてください。問いでは、元ナラティブの日本語の項目名
+（例: 「失うことが怖いもの」「本当の願望」「日常」）を使い、実例から考えられる問いとして書きます。
+英語のJSONキー名は使わず、項目は日本語名で参照してください。
 evidence_runs には次の実在run名だけを使い、存在しない番号は出力しないでください。
 {json.dumps([run.name for run in runs], ensure_ascii=False)}
 
@@ -492,7 +499,7 @@ evidence_runs には次の実在run名だけを使い、存在しない番号は
 }}
 
 元ナラティブ:
-{json.dumps(dict(narrative), ensure_ascii=False, indent=2)}
+{json.dumps(labelled_narrative, ensure_ascii=False, indent=2)}
 
 作品要約:
 {json.dumps(summary_items, ensure_ascii=False, indent=2)}
@@ -580,6 +587,7 @@ def _normalise_patterns(
         question = str(item.get("question", "")).strip()
         if not pattern or not question:
             return None
+        question = _replace_narrative_keys(question)
         raw_evidence = item.get("evidence_runs", [])
         if not isinstance(raw_evidence, (list, tuple)):
             return None
@@ -596,6 +604,17 @@ def _normalise_patterns(
             }
         )
     return patterns
+
+
+def _replace_narrative_keys(question: str) -> str:
+    """問いに残った英語のナラティブキーを日本語名へ置換する。"""
+    for key, label in NARRATIVE_LABELS.items():
+        question = re.sub(
+            rf"(?<![A-Za-z0-9_]){re.escape(key)}(?![A-Za-z0-9_])",
+            label,
+            question,
+        )
+    return question
 
 
 def _canonical_run_name(

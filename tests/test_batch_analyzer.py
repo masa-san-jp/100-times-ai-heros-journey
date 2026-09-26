@@ -3,7 +3,13 @@
 import json
 
 import src.llm_factory as llm_factory
-from src.batch_analyzer import BatchAnalyzer, analyze_batch
+from src.batch_analyzer import (
+    BatchAnalyzer,
+    _integration_prompt,
+    _normalise_patterns,
+    analyze_batch,
+)
+from src.narrative_interview import NARRATIVE_QUESTIONS
 
 
 def _write_batch(tmp_path):
@@ -208,6 +214,36 @@ def test_failed_runs_are_excluded_from_integration_prompt(tmp_path):
     assert client.integration_prompt is not None
     assert "run_001" not in client.integration_prompt
     assert "run_002" in client.integration_prompt
+
+
+def test_integration_prompt_uses_narrative_labels():
+    narrative = {
+        question.key: f"テスト値-{index}"
+        for index, question in enumerate(NARRATIVE_QUESTIONS, start=1)
+    }
+    prompt = _integration_prompt([], [], narrative)
+
+    for index, question in enumerate(NARRATIVE_QUESTIONS, start=1):
+        assert question.key not in prompt
+        assert f'"{question.label}": "テスト値-{index}"' in prompt
+
+
+def test_narrative_keys_are_replaced_only_as_words():
+    patterns = _normalise_patterns(
+        {
+            "patterns": [
+                {
+                    "pattern": "検証",
+                    "question": "『change』とchange、exchangeの関係は？",
+                    "evidence_runs": [],
+                }
+            ]
+        },
+        [],
+    )
+
+    assert patterns is not None
+    assert patterns[0]["question"] == "『変化のきっかけ』と変化のきっかけ、exchangeの関係は？"
 
 
 def test_plot_type_name_is_extracted_from_metadata_markdown(tmp_path):
