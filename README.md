@@ -114,6 +114,28 @@ python run_pipeline.py \
 章本文は章ごとにチェックポイント保存されます。出力上限で章が切れた場合は、既定で最大2回続きを生成します。
 この回数は `--max-chapter-continuations N` で変更できます。
 
+## 生成後に振り返る
+
+バッチ生成後は、作品群を横断した決定的集計と振り返りレポートを作成できます。
+まずはLLMを使わず、完了済みrunの一覧と選択要素の頻度だけを確認できます。
+
+```bash
+python analyze_batch.py output/batch_experiment-01 --no-llm
+```
+
+LLMによる作品ごとの要約と横断解釈も行う場合は、生成時と同じプロバイダー・モデル指定を使えます。
+作品ごとの要約は各 `run_XXX/cross_summary.json` にキャッシュされ、`--refresh` を付けたときだけ再生成されます。
+
+```bash
+python analyze_batch.py output/batch_experiment-01 \
+  --provider ollama --model gpt-oss:20b --num-ctx 32768
+```
+
+`batch_report.md` は人が読むためのレポート、`batch_report.json` は同じ内容の機械可読版です。
+未完了runは自動的にスキップされ、件数が概要に記載されます。レポートは傾向と該当作品を並べますが、
+解釈を断定・診断せず、元ナラティブとの対応は問いの形で提示する設計です。`--num-ctx` はOllamaの
+分析用コンテキスト長で、本文が推定入力上限を超える場合は冒頭と末尾を残して中略し、警告を表示します。
+
 ## CLIオプション
 
 | オプション | 既定値 | 用途 |

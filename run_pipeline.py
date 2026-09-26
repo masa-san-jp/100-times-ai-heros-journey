@@ -7,7 +7,13 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Optional
+
+from src.llm_factory import (
+    choose_installed_model,
+    create_provider_client,
+    resolve_ollama_model,
+)
 
 SAMPLE = {
     "author": "未知を学び、本質を考え、空想することが好き。",
@@ -35,77 +41,6 @@ def load_narrative(path: Optional[str]) -> NarrativeInput:
             loaded = json.load(handle)
         values = {**SAMPLE, **loaded}
     return NarrativeInput(**values)
-
-
-def choose_installed_model(
-    installed_models: List[str],
-    preferred_model: str = "gpt-oss:20b",
-    interactive: bool = False,
-    input_fn: Callable[[str], str] = input,
-) -> str:
-    """インストール済みモデルから、実行に使うモデルを選ぶ。
-
-    対話モードでは番号を入力でき、空入力なら推奨モデル（なければ先頭）を
-    選ぶ。非対話モードでは同じ優先順位で自動選択する。
-    """
-    models = sorted({model for model in installed_models if model})
-    if not models:
-        raise ValueError("installed_models must contain at least one model")
-
-    default_index = models.index(preferred_model) + 1 if preferred_model in models else 1
-    if not interactive or len(models) == 1:
-        return models[default_index - 1]
-
-    print("インストール済みのOllamaモデル:")
-    for index, model in enumerate(models, start=1):
-        marker = " (推奨)" if index == default_index else ""
-        print(f"  {index}. {model}{marker}")
-
-    while True:
-        answer = input_fn(
-            f"使用するモデル番号 [{default_index}]: "
-        ).strip()
-        if not answer:
-            return models[default_index - 1]
-        try:
-            index = int(answer)
-        except ValueError:
-            print("番号を入力してください。")
-            continue
-        if 1 <= index <= len(models):
-            return models[index - 1]
-        print(f"1〜{len(models)}の番号を入力してください。")
-
-
-def resolve_ollama_model(
-    requested_model: Optional[str],
-    timeout: int,
-    default_model: str = "gpt-oss:20b",
-) -> str:
-    """Ollamaのモデルを解決し、必要ならダウンロードする。"""
-    from src.ollama_client import OllamaClient, OllamaConfig
-
-    client = OllamaClient(OllamaConfig(model=default_model, timeout=timeout))
-    installed_models = client.list_models()
-
-    if requested_model:
-        if requested_model not in installed_models:
-            print(f"{requested_model} は未インストールです。ダウンロードします。")
-            client.pull_model(requested_model)
-        return requested_model
-
-    if installed_models:
-        selected = choose_installed_model(
-            installed_models,
-            preferred_model=default_model,
-            interactive=sys.stdin.isatty(),
-        )
-        print(f"使用モデル: {selected}")
-        return selected
-
-    print(f"Ollamaにモデルがありません。{default_model}をダウンロードします。")
-    client.pull_model(default_model)
-    return default_model
 
 
 def main() -> int:
@@ -203,28 +138,15 @@ def main() -> int:
         pipeline = ColabParityPipeline(ollama_config=config)
     elif args.provider == "openai":
         from src.colab_pipeline import ColabParityPipeline, PipelineConfig
-        from src.provider_clients import OpenAICompatibleClient
-        client = OpenAICompatibleClient(
-            model=args.model or "o3-mini",
-            timeout=args.timeout,
-            reasoning_effort="medium",
-        )
+        client, _ = create_provider_client(args.provider, args.model, args.timeout)
         pipeline = ColabParityPipeline(client=client)
     elif args.provider == "anthropic":
         from src.colab_pipeline import ColabParityPipeline, PipelineConfig
-        from src.provider_clients import AnthropicClient
-        client = AnthropicClient(
-            model=args.model or "claude-3-5-sonnet-20241022",
-            timeout=args.timeout,
-        )
+        client, _ = create_provider_client(args.provider, args.model, args.timeout)
         pipeline = ColabParityPipeline(client=client)
     else:
         from src.colab_pipeline import ColabParityPipeline, PipelineConfig
-        from src.provider_clients import DeepSeekClient
-        client = DeepSeekClient(
-            model=args.model or "deepseek-reasoner",
-            timeout=args.timeout,
-        )
+        client, _ = create_provider_client(args.provider, args.model, args.timeout)
         pipeline = ColabParityPipeline(client=client)
 
     narrative = load_narrative(args.narrative_json)
