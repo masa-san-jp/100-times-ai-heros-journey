@@ -2,7 +2,7 @@
 
 作家の自己ナラティブから、ヒーローズ・ジャーニー形式の物語を生成するPython CLI/APIです。
 標準ではOllama上のローカルモデルを使うため、入力と生成物を外部APIへ送らずに実行できます。
-元のGoogle Colabノートブックもリポジトリに残していますが、繰り返し生成・途中再開・重複除外を行う場合は、
+元のGoogle Colabノートブックは `legacy/` にアーカイブしています。繰り返し生成・途中再開・重複除外を行う場合は、
 ローカル版の `run_pipeline.py` を使ってください。
 
 ## 兄弟リポジトリ
@@ -276,7 +276,7 @@ Google Sheets保存用の `src/sheet_storage.py` は `gspread` のWorksheet互�
 
 ## Colabノートブック
 
-`20250208-100-Times-AI-Heros-Journey-v.10.ipynb` は元のGoogle Colab版です。
+`legacy/20250208-100-Times-AI-Heros-Journey-v.10.ipynb` は元のGoogle Colab版です。
 ノートブックを使う場合は、ノートブック内の依存関係・APIキー設定・セル実行順に従ってください。
 ローカル版の実装と完全に同じ依存関係や保存形式ではありません。
 

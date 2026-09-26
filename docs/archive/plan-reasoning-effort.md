@@ -115,7 +115,7 @@ REASONING_CONFIG = {
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `20250208-100-Times-AI-Heros-Journey-v.10.ipynb` | 関数定義の変更、設定辞書の追加、各呼び出し箇所の更新 |
+| `legacy/20250208-100-Times-AI-Heros-Journey-v.10.ipynb` | 関数定義の変更、設定辞書の追加、各呼び出し箇所の更新 |
 | `docs/design-specification.md` | 関数仕様と設定の記述を更新 |
 
 ---
