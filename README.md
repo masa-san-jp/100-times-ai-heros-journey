@@ -55,6 +55,18 @@ python run_pipeline.py \
 
 ## 入力を変える
 
+13項目を対話形式で入力する場合は、次のコマンドを実行してください。回答はローカルのJSONに保存されます。
+
+```bash
+python create_narrative.py --out narrative.json
+```
+
+既存のJSONを編集する場合は `--from` を指定します。手書きでJSONを作成して `--narrative-json` に渡す方法も引き続き利用できます。
+
+```bash
+python create_narrative.py --from narrative.json --out narrative.json
+```
+
 `--narrative-json` には次の13項目を持つJSONを指定します。
 
 `author`, `missing`, `status`, `memories`, `mission`, `success`, `loss`, `taboo`,
