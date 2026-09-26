@@ -2,7 +2,7 @@
 
 **バージョン:** 1.0
 **作成日:** 2026-02-13
-**対象ノートブック:** `20250208-100-Times-AI-Heros-Journey-v.10.ipynb`
+**対象ノートブック:** `legacy/20250208-100-Times-AI-Heros-Journey-v.10.ipynb`
 **著者:** masa-jp-art
 
 ---

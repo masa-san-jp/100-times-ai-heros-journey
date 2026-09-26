@@ -1,7 +1,7 @@
 # 開発者向けガイド
 
 このリポジトリの実装は、`src/` の生成器と `run_pipeline.py` のCLIで構成されています。
-元のGoogle Colab版は `20250208-100-Times-AI-Heros-Journey-v.10.ipynb` に保存されています。
+元のGoogle Colab版は `legacy/20250208-100-Times-AI-Heros-Journey-v.10.ipynb` に保存されています。
 
 ## 構成
 
