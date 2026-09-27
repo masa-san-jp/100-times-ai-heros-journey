@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "default_profile": "qwen-image-2.1-turbo",
+  "profiles": {
+    "qwen-image-2.1-turbo": {
+      "width": 720,
+      "height": 400,
+      "timeout_seconds": 600,
+      "workflow_path": "config/comfyui/storyboard_qwen_image_2_1_turbo_api_workflow.json",
+      "reference_workflow_path": null,
+      "model_files": [
+        {"subdir": "diffusion_models", "filename": "qwen_image_2.1_bf16.safetensors"},
+        {"subdir": "text_encoders", "filename": "qwen3vl_8b_bf16.safetensors"},
+        {"subdir": "vae", "filename": "qwen_image_2.1_vae_bf16.safetensors"},
+        {"subdir": "loras", "filename": "Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r128.safetensors"}
+      ],
+      "license_name": "Qwen Research License Agreement (2026-09-20)",
+      "license_url": "https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE",
+      "notes": "実機比較: 720×400 約29秒/枚、1024×576 約71秒、1344×768 約140秒、1664×928 約221秒。ピークRSSはいずれも約17.8GBで、720×400は破綻なし。動作の軽さを優先して採用。"
+    }
+  }
+}
