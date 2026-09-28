@@ -54,7 +54,10 @@ gpt-oss作例の所要時間は、本文生成後にビジュアルプロンプ�
 ![風の鼓音 ストーリーボード](batch_full-gpt-oss-20b/run_001/storyboard/storyboard_sheet.png)
 
 - コマ数: 10（1章=1コマ）
+- ショットサイズ: 段階から割り当て（大ロング3、ロング3、全身1、ミディアム1、クローズアップ2）
 - ショットリスト: `gpt-oss:20b`
-- 画像: `qwen-image-2.1-turbo`（Qwen-Image 2.1 + Viggle 6ステップLoRA）、720×400、`--seed 42`、キャラクター参照なし
+- 画像: `qwen-image-2.1-turbo`（Qwen-Image 2.1 + Viggle 6ステップLoRA）、720×400、`--seed 42`
+- キャラクター参照: 既定の `closeup`（ミディアムとクローズアップの3コマだけ参照画像を使用。参照画像は `storyboard/characters/`）
+- 1コマの生成時間: 参照なし約32〜41秒、参照あり約74〜95秒
 - 実行環境: M4 Max、ComfyUI v0.37.4
 - 画像モデルのライセンス: [Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)（利用目的は研究・評価に限られます）
