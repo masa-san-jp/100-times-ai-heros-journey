@@ -177,6 +177,34 @@ class TestBuildPayload:
 
 
 class TestModelManagement:
+    def test_release_model_requests_keep_alive_zero(self, client, monkeypatch):
+        calls = []
+
+        class Response:
+            def raise_for_status(self):
+                return None
+
+        def post(url, json, timeout):
+            calls.append((url, json, timeout))
+            return Response()
+
+        monkeypatch.setattr(ollama_module.requests, "post", post)
+
+        client.release_model()
+
+        assert calls == [
+            (
+                "http://localhost:11434/api/generate",
+                {
+                    "model": "gpt-oss:20b",
+                    "prompt": "",
+                    "stream": False,
+                    "keep_alive": 0,
+                },
+                300,
+            )
+        ]
+
     def test_pull_model_invokes_ollama_cli(self, client, monkeypatch):
         calls = []
 

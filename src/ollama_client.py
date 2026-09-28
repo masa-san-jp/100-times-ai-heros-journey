@@ -382,6 +382,45 @@ class OllamaClient:
         except Exception as e:
             raise OllamaClientError(f"Failed to list models: {e}")
 
+    def release_model(self, model: Optional[str] = None) -> None:
+        """Ollamaにモデルをアンロードするよう依頼する。
+
+        ``keep_alive: 0`` は生成を行わず、指定モデルをメモリから解放する
+        Ollama API の正式な指定方法である。
+        """
+        use_model = model or self.config.model
+        if not use_model or not isinstance(use_model, str):
+            raise ValueError("model must be a non-empty string")
+
+        payload = {
+            "model": use_model,
+            "prompt": "",
+            "stream": False,
+            "keep_alive": 0,
+        }
+        try:
+            response = requests.post(
+                f"{self.config.base_url}/api/generate",
+                json=payload,
+                timeout=self.config.timeout,
+            )
+            response.raise_for_status()
+        except requests.exceptions.Timeout as exc:
+            raise OllamaClientError(
+                f"Request timeout after {self.config.timeout} seconds"
+            ) from exc
+        except requests.exceptions.ConnectionError as exc:
+            raise OllamaClientError(
+                f"Failed to connect to Ollama server at {self.config.base_url}"
+            ) from exc
+        except requests.exceptions.HTTPError as exc:
+            raise OllamaClientError(f"HTTP error: {exc}") from exc
+        except requests.exceptions.RequestException as exc:
+            raise OllamaClientError(f"Failed to release Ollama model: {exc}") from exc
+
+    # ``unload_model`` is a descriptive alias for callers that use that term.
+    unload_model = release_model
+
     def pull_model(self, model: str) -> None:
         """Ollama CLIでモデルをダウンロードする。
 
