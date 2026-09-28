@@ -104,7 +104,7 @@ def _select_runs(path: Path, runs_option: Optional[str]) -> List[CompletedRun]:
 
 
 def _needs_shot_client(run: CompletedRun, args: argparse.Namespace) -> bool:
-    if args.images_only:
+    if args.images_only or args.rebuild_prompts:
         return False
     shots_path = run.path / "storyboard" / "shots.json"
     if args.rebuild_prompts or args.refresh_shots or not shots_path.exists():

@@ -1,0 +1,45 @@
+{
+  "shot_sizes": [
+    "extreme_long",
+    "long",
+    "full",
+    "medium",
+    "close_up"
+  ],
+  "prompt_phrases": {
+    "extreme_long": "Extreme long shot, vast establishing view, tiny distant figures, deep focus",
+    "long": "Long shot, full environment visible, small figures, deep focus",
+    "full": "Full shot, head-to-toe figures within their surroundings",
+    "medium": "Medium shot, waist-up",
+    "close_up": "Close-up on the face, shallow depth of field"
+  },
+  "stage_plans": {
+    "11": [
+      "extreme_long",
+      "long",
+      "close_up",
+      "full",
+      "long",
+      "medium",
+      "close_up",
+      "full",
+      "long",
+      "close_up",
+      "extreme_long"
+    ],
+    "12": [
+      "extreme_long",
+      "long",
+      "close_up",
+      "full",
+      "long",
+      "medium",
+      "extreme_long",
+      "close_up",
+      "full",
+      "long",
+      "close_up",
+      "extreme_long"
+    ]
+  }
+}

@@ -197,6 +197,8 @@ python render_storyboard.py output/batch_experiment-01 --runs 1,3-5 --seed 42
 ```
 
 ショットリストだけを作る場合は`--shots-only`、既存の`shots.json`から画像だけを作る場合は`--images-only`を使います。
+ショットサイズは物語段階から決定的に割り当てられます。既存の`shots.json`を`--rebuild-prompts`で補正することもできますが、`setting` / `action`は旧サイズ前提のため、サイズに合わせた場面から作り直す場合は`--refresh-shots`を推奨します。
+11段階版は、12段階版の「最も危険な場所への接近」を持たない既存の段階定義に対応し、`extreme_long, long, close_up, full, long, medium, close_up, full, long, close_up, extreme_long`の順で割り当てます。
 `--shots-only`または画像生成の完了時には、画像一覧の`storyboard_sheet.png`とMarkdown形式の`storyboard.md`も出力されます。
 シートの列数は`--sheet-columns N`（既定値2）で変更できます。Pillowを導入していない環境では、シートだけを警告付きでスキップし、`storyboard.md`は出力します。
 `--force`を付けない限り、manifestの同じショットIDが成功済みで現在のpromptと一致する画像はスキップされるため、途中で中断しても同じコマンドを再実行できます。
