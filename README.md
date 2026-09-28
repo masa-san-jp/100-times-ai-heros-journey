@@ -7,7 +7,7 @@
 
 - 概要: [目的とコンセプト](#目的とコンセプト) / [使い方の流れ](#使い方の流れ) / [兄弟リポジトリ](#兄弟リポジトリ)
 - 使う: [まず動かす](#まず動かす) / [入力を変える](#入力を変える) / [繰り返し生成・途中再開](#繰り返し生成途中再開) / [生成後に振り返る](#生成後に振り返る)
-- 詳しく: [CLIオプション](#cliオプション) / [モデルの選択](#モデルの選択) / [生成される工程](#生成される工程) / [出力構成](#出力構成) / [Python API](#python-api) / [外部APIを使う場合](#外部apiを使う場合)
+- 詳しく: [CLIオプション](#cliオプション) / [モデルの選択](#モデルの選択) / [生成される工程](#生成される工程) / [ストーリーボードを作る](#ストーリーボードを作る) / [出力構成](#出力構成) / [Python API](#python-api) / [外部APIを使う場合](#外部apiを使う場合)
 - 背景: [変遷](#変遷) / [開発・テスト](#開発テスト) / [制約と目安](#制約と目安) / [ライセンス](#ライセンス)
 
 ## 目的とコンセプト
@@ -38,6 +38,7 @@ Joseph Campbell の「ヒーローズ・ジャーニー（英雄の旅）」理�
 | 1. 入力を作る | `create_narrative.py` | 13項目の自己ナラティブ `narrative.json` |
 | 2. 物語を生成する | `run_pipeline.py` | 分析・世界観・キャラクター・プロット・章本文・ビジュアルプロンプト |
 | 3. 生成結果を集計する | `analyze_batch.py` | 作品一覧、要素の頻度表、LLMによる横断パターンと問い（`batch_report.md`） |
+| 4. ストーリーボードを作る | `render_storyboard.py` | ショットリストと16:9画像（`storyboard/`） |
 
 ## 兄弟リポジトリ
 
@@ -182,6 +183,34 @@ python analyze_batch.py output/batch_experiment-01 \
 解釈を断定・診断せず、元ナラティブとの対応は問いの形で提示する設計です。`--num-ctx` はOllamaの
 分析用コンテキスト長で、本文が推定入力上限を超える場合は冒頭と末尾を残して中略し、警告を表示します。
 
+## ストーリーボードを作る
+
+画像生成には、兄弟リポジトリ [100-times-ai-heroes](https://github.com/masa-san-jp/100-times-ai-heroes) で導入した
+ComfyUIとViggle Turbo用カスタムノードが必要です。ComfyUIを起動した状態で、作品単体またはバッチを指定します。
+
+```bash
+python render_storyboard.py output/batch_experiment-01/run_001
+python render_storyboard.py output/batch_experiment-01 --runs 1,3-5 --seed 42
+```
+
+ショットリストだけを作る場合は`--shots-only`、既存の`shots.json`から画像だけを作る場合は`--images-only`を使います。
+`--force`を付けない限り、manifestの同じショットIDが成功済みで現在のpromptと一致する画像はスキップされるため、途中で中断しても同じコマンドを再実行できます。
+ComfyUIの接続先は環境変数`COMFYUI_URL`で変更でき、未設定時は`http://127.0.0.1:8188`です。
+`--dry-run`は生成予定のショット数・プロンプト・推定時間を表示して終了します。`shots.json`がないrunでは、プロンプト表示のためLLMでショットリストを作成します。
+既定profileは720×400（16:9）です。M4 Maxで `examples/batch_full-gpt-oss-20b/run_001` の10ショットを生成した実測では、ショットリスト生成（`gpt-oss:20b`）が約5分、画像が1枚約47〜85秒でした（モデル読み込み、プロンプトの長さ、マシンの状態により変動します）。
+
+出力は各`run_XXX/storyboard/`に保存されます。
+
+```text
+storyboard/
+├── shots.json
+├── shots.md
+├── shot_01.png ... shot_NN.png
+└── render_manifest.json
+```
+
+`render_manifest.json`にはprofile、モデルファイル、解像度、各ショットのseed・prompt・所要秒数・成否・エラーが記録されます。
+
 ## CLIオプション
 
 | オプション | 既定値 | 用途 |
@@ -280,7 +309,12 @@ output/
         ├── world.md
         ├── plot_skeleton.md
         ├── visual_prompts.md
-        └── cross_summary.json   # analyze_batch.py(LLMあり)実行後
+        ├── cross_summary.json   # analyze_batch.py(LLMあり)実行後
+        └── storyboard/          # render_storyboard.py 実行後
+            ├── shots.json
+            ├── shots.md
+            ├── shot_01.png ... shot_NN.png
+            └── render_manifest.json
 ```
 
 生成途中または失敗時には、`run_001/` に `draft.json`、`chapter_01.md`、

@@ -730,6 +730,17 @@ def _read_shot_list(path: Path, run_dir: Path) -> ShotList:
     )
 
 
+def read_shot_list(run_dir: str | Path) -> ShotList:
+    """既存のrunから保存済みショットリストを読み込む。"""
+    run_path = Path(run_dir)
+    return _read_shot_list(run_path / "storyboard" / "shots.json", run_path)
+
+
+def has_failed_shots(shot_list: ShotList) -> bool:
+    """ショットリストにLLM生成失敗のショットが含まれるか返す。"""
+    return bool(_failed_units(shot_list))
+
+
 def _write_outputs(result: ShotList) -> None:
     storyboard_dir = result.run_dir / "storyboard"
     storyboard_dir.mkdir(parents=True, exist_ok=True)
@@ -822,4 +833,11 @@ if __name__ == "__main__":
     raise SystemExit(main())
 
 
-__all__ = ["DEFAULT_STYLE", "ShotList", "StoryboardError", "build_shot_list"]
+__all__ = [
+    "DEFAULT_STYLE",
+    "ShotList",
+    "StoryboardError",
+    "build_shot_list",
+    "has_failed_shots",
+    "read_shot_list",
+]
