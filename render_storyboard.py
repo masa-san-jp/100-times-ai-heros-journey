@@ -20,8 +20,11 @@ from src.comfyui_client import (
 )
 from src.llm_factory import create_provider_client
 from src.storyboard import (
+    ALLOWED_ROLES,
     DEFAULT_STYLE,
     StoryboardError,
+    _appearance_without_mood,
+    _parse_visual_prompts,
     build_shot_list,
     has_failed_shots,
     read_shot_list,
@@ -161,18 +164,123 @@ def _resolve_workflow_path(profile: Mapping[str, Any]) -> Path:
     return workflow if workflow.is_absolute() else Path(__file__).resolve().parent / workflow
 
 
+def _resolve_reference_workflow_path(profile: Mapping[str, Any]) -> Optional[Path]:
+    workflow_value = profile.get("reference_workflow_path")
+    if not workflow_value:
+        return None
+    workflow = Path(str(workflow_value))
+    return workflow if workflow.is_absolute() else Path(__file__).resolve().parent / workflow
+
+
+def _reference_roles(shots: Sequence[Mapping[str, Any]]) -> List[str]:
+    present = {
+        str(role).strip()
+        for shot in shots
+        for role in shot.get("characters", [])
+        if str(role).strip() in ALLOWED_ROLES
+    }
+    return [role for role in ALLOWED_ROLES if role in present]
+
+
+def _character_reference_prompt(appearance: str) -> str:
+    appearance = _appearance_without_mood(appearance).strip()
+    suffix = (
+        "Full body, single character, standing, plain white background, "
+        "photorealistic, no text or watermark."
+    )
+    return f"{appearance} {suffix}" if appearance else suffix
+
+
+def _read_character_visual_prompts(run_dir: Path) -> Dict[str, str]:
+    path = run_dir / "visual_prompts.md"
+    try:
+        prompts = _parse_visual_prompts(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError) as exc:
+        raise RenderStoryboardError(f"visual_prompts.mdを読み取れません: {path}") from exc
+    if not prompts:
+        raise RenderStoryboardError(f"visual_prompts.mdに外見文がありません: {path}")
+    return prompts
+
+
+def _prepare_character_references(
+    run: CompletedRun,
+    shots: Sequence[Mapping[str, Any]],
+    generator: Any,
+    profile: Mapping[str, Any],
+    args: argparse.Namespace,
+) -> Dict[str, Path]:
+    if not getattr(args, "character_refs", False):
+        return {}
+    reference_dir = run.path / "storyboard" / "characters"
+    references: Dict[str, Path] = {}
+    roles = _reference_roles(shots)
+    missing_roles = [
+        role for role in roles if not (reference_dir / f"{role}.png").exists()
+    ]
+    prompts = _read_character_visual_prompts(run.path) if missing_roles else {}
+    for role in roles:
+        path = reference_dir / f"{role}.png"
+        if not path.exists():
+            if role not in prompts:
+                raise RenderStoryboardError(
+                    f"visual_prompts.mdに{role}の外見文がありません: {run.path}"
+                )
+            generator.generate(
+                _character_reference_prompt(prompts[role]),
+                reference_dir,
+                role,
+                seed=_derive_seed(args.seed, run.path, f"character-{role}"),
+                width=int(profile.get("reference_width", 448)),
+                height=int(profile.get("reference_height", 768)),
+            )
+        references[role] = path
+    return references
+
+
+def _shot_reference_paths(
+    shot: Mapping[str, Any], references: Mapping[str, Path]
+) -> List[Path]:
+    return [
+        references[role]
+        for role in shot.get("characters", [])
+        if str(role) in references
+    ][:2]
+
+
+def _shot_render_prompt(shot: Mapping[str, Any], reference_paths: Sequence[Path]) -> str:
+    prompt = str(shot.get("prompt_en", ""))
+    if not reference_paths:
+        return prompt
+    roles = [
+        str(role)
+        for role in shot.get("characters", [])
+        if str(role) in {path.stem for path in reference_paths}
+    ][:2]
+    prefix = " ".join(
+        f"The {role} is the person in image {index}." for index, role in enumerate(roles, 1)
+    )
+    return f"{prefix} {prompt}".strip()
+
+
 def _new_manifest(
-    profile: Mapping[str, Any], shots: Sequence[Mapping[str, Any]], run_dir: Path, seed: Optional[int]
+    profile: Mapping[str, Any],
+    shots: Sequence[Mapping[str, Any]],
+    run_dir: Path,
+    seed: Optional[int],
+    references: Optional[Mapping[str, Path]] = None,
 ) -> Dict[str, Any]:
+    references = references or {}
     entries = []
     for index, shot in enumerate(shots, start=1):
         shot_id = str(shot.get("id") or f"{index:02d}")
+        shot_references = _shot_reference_paths(shot, references)
         entries.append(
             {
                 "id": shot_id,
                 "filename": f"shot_{shot_id}.png",
                 "seed": _derive_seed(seed, run_dir, shot_id),
-                "prompt": str(shot.get("prompt_en", "")),
+                "prompt": _shot_render_prompt(shot, shot_references),
+                "references": [f"characters/{path.name}" for path in shot_references],
                 "elapsed_seconds": None,
                 "duration_seconds": None,
                 "success": None,
@@ -185,6 +293,9 @@ def _new_manifest(
         "model_files": _model_filenames(profile),
         "width": profile["width"],
         "height": profile["height"],
+        "character_references": {
+            role: f"characters/{path.name}" for role, path in references.items()
+        },
         "shots": entries,
     }
 
@@ -201,7 +312,12 @@ def _shot_id(index: int, shot: Mapping[str, Any]) -> str:
     return str(shot.get("id") or f"{index + 1:02d}")
 
 
-def _shot_entry(manifest: Dict[str, Any], index: int, shot: Mapping[str, Any]) -> Dict[str, Any]:
+def _shot_entry(
+    manifest: Dict[str, Any],
+    index: int,
+    shot: Mapping[str, Any],
+    references: Optional[Mapping[str, Path]] = None,
+) -> Dict[str, Any]:
     entries = manifest.setdefault("shots", [])
     while len(entries) <= index:
         entries.append({})
@@ -210,11 +326,13 @@ def _shot_entry(manifest: Dict[str, Any], index: int, shot: Mapping[str, Any]) -
         entry = {}
         entries[index] = entry
     shot_id = _shot_id(index, shot)
+    shot_references = _shot_reference_paths(shot, references or {})
     entry.update(
         {
             "id": shot_id,
             "filename": f"shot_{shot_id}.png",
-            "prompt": str(shot.get("prompt_en", "")),
+            "prompt": _shot_render_prompt(shot, shot_references),
+            "references": [f"characters/{path.name}" for path in shot_references],
         }
     )
     return entry
@@ -226,6 +344,8 @@ def _can_skip_image(
     index: int,
     old_entries: Mapping[str, Mapping[str, Any]],
     force: bool,
+    prompt: Optional[str] = None,
+    references: Optional[Sequence[str]] = None,
 ) -> bool:
     if force:
         return False
@@ -236,7 +356,9 @@ def _can_skip_image(
         image_path.exists()
         and old_entry
         and old_entry.get("status") in ("success", "skipped")
-        and old_entry.get("prompt") == str(shot.get("prompt_en", ""))
+        and old_entry.get("prompt")
+        == (prompt if prompt is not None else str(shot.get("prompt_en", "")))
+        and list(old_entry.get("references", [])) == list(references or [])
     )
 
 
@@ -268,6 +390,7 @@ def _render_run(
 ) -> int:
     storyboard_dir = run.path / "storyboard"
     manifest_path = storyboard_dir / "render_manifest.json"
+    references = _prepare_character_references(run, shot_list.shots, generator, profile, args)
     existing = _load_manifest(manifest_path)
     old_entries: Dict[str, Mapping[str, Any]] = {}
     if existing and isinstance(existing.get("shots"), list):
@@ -276,7 +399,7 @@ def _render_run(
             for item in existing["shots"]
             if isinstance(item, Mapping) and item.get("id") is not None
         }
-    manifest = _new_manifest(profile, shot_list.shots, run.path, args.seed)
+    manifest = _new_manifest(profile, shot_list.shots, run.path, args.seed, references)
     for entry in manifest["shots"]:
         old_entry = old_entries.get(str(entry["id"]))
         if old_entry:
@@ -297,8 +420,11 @@ def _render_run(
     started = time.monotonic()
     total = len(shot_list.shots)
     for index, shot in enumerate(shot_list.shots):
-        entry = _shot_entry(manifest, index, shot)
+        entry = _shot_entry(manifest, index, shot, references)
         shot_id = str(entry["id"])
+        shot_references = _shot_reference_paths(shot, references)
+        render_prompt = _shot_render_prompt(shot, shot_references)
+        reference_manifest_paths = [f"characters/{path.name}" for path in shot_references]
         if shot.get("status") == "failed":
             failures += 1
             entry.update(
@@ -314,7 +440,15 @@ def _render_run(
             _print_progress(run.name, index + 1, total, shot_id, "failed", time.monotonic() - started, durations)
             continue
 
-        if _can_skip_image(storyboard_dir, shot, index, old_entries, args.force):
+        if _can_skip_image(
+            storyboard_dir,
+            shot,
+            index,
+            old_entries,
+            args.force,
+            prompt=render_prompt,
+            references=reference_manifest_paths,
+        ):
             entry["success"] = True
             entry["status"] = "skipped"
             entry["error"] = None
@@ -329,11 +463,14 @@ def _render_run(
         shot_started = time.monotonic()
         planned_seed = _derive_seed(args.seed, run.path, shot_id)
         try:
+            generate_kwargs: Dict[str, Any] = {"seed": planned_seed}
+            if shot_references:
+                generate_kwargs["reference_images"] = shot_references
             generated = generator.generate(
-                str(shot.get("prompt_en", "")),
+                render_prompt,
                 storyboard_dir,
                 f"shot_{shot_id}",
-                seed=planned_seed,
+                **generate_kwargs,
             )
             elapsed = time.monotonic() - shot_started
             entry.update(
@@ -371,6 +508,10 @@ def _print_dry_run(runs: Sequence[CompletedRun], shot_lists: Mapping[Path, Any],
     pending = 0
     for run in runs:
         shot_list = shot_lists[run.path]
+        references = {
+            role: run.path / "storyboard" / "characters" / f"{role}.png"
+            for role in _reference_roles(shot_list.shots)
+        } if getattr(args, "character_refs", False) else {}
         manifest = _load_manifest(run.path / "storyboard" / "render_manifest.json") or {}
         old_entries = {
             str(item["id"]): item
@@ -379,12 +520,21 @@ def _print_dry_run(runs: Sequence[CompletedRun], shot_lists: Mapping[Path, Any],
         }
         for index, shot in enumerate(shot_list.shots, start=1):
             shot_id = _shot_id(index - 1, shot)
+            shot_references = _shot_reference_paths(shot, references)
+            render_prompt = _shot_render_prompt(shot, shot_references)
+            reference_manifest_paths = [f"characters/{path.name}" for path in shot_references]
             if shot.get("status") == "failed" or _can_skip_image(
-                run.path / "storyboard", shot, index - 1, old_entries, args.force
+                run.path / "storyboard",
+                shot,
+                index - 1,
+                old_entries,
+                args.force,
+                prompt=render_prompt,
+                references=reference_manifest_paths,
             ):
                 continue
             pending += 1
-            print(f"[{run.name} {index}/{len(shot_list.shots)}] shot_{shot_id}: {shot.get('prompt_en', '')}")
+            print(f"[{run.name} {index}/{len(shot_list.shots)}] shot_{shot_id}: {render_prompt}")
     print(f"生成予定ショット数: {pending}")
     print(f"推定所要時間: {pending * ESTIMATED_SECONDS_PER_IMAGE:.0f}秒（約55秒/枚で概算）")
 
@@ -410,6 +560,11 @@ def _make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--profile", default=None)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument(
+        "--character-refs",
+        action="store_true",
+        help="登場キャラクターの参照画像を生成してショットに渡す",
+    )
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
         "--dry-run",
@@ -470,6 +625,12 @@ def run(args: argparse.Namespace) -> int:
     generator = ComfyUIImageGenerator(
         base_url=args.comfyui_url,
         workflow_path=_resolve_workflow_path(profile),
+        reference_workflow_path=_resolve_reference_workflow_path(profile),
+        reference_encode_resolution=(
+            int(profile["reference_encode_resolution"])
+            if profile.get("reference_encode_resolution") is not None
+            else None
+        ),
         model_files=profile.get("model_files", []),
         width=int(profile["width"]),
         height=int(profile["height"]),

@@ -195,6 +195,7 @@ python render_storyboard.py output/batch_experiment-01 --runs 1,3-5 --seed 42
 
 ショットリストだけを作る場合は`--shots-only`、既存の`shots.json`から画像だけを作る場合は`--images-only`を使います。
 `--force`を付けない限り、manifestの同じショットIDが成功済みで現在のpromptと一致する画像はスキップされるため、途中で中断しても同じコマンドを再実行できます。
+`--character-refs`を付けると、各ショットに登場するキャラクターだけの参照画像を`storyboard/characters/`に生成し、ショット生成に渡します。既存の参照画像は再利用され、参照画像の組み合わせが変わったショットは再生成されます。
 ComfyUIの接続先は環境変数`COMFYUI_URL`で変更でき、未設定時は`http://127.0.0.1:8188`です。
 `--dry-run`は生成予定のショット数・プロンプト・推定時間を表示して終了します。`shots.json`がないrunでは、プロンプト表示のためLLMでショットリストを作成します。
 既定profileは720×400（16:9）です。M4 Maxで `examples/batch_full-gpt-oss-20b/run_001` の10ショットを生成した実測では、ショットリスト生成（`gpt-oss:20b`）が約5分、画像が1枚約47〜85秒でした（モデル読み込み、プロンプトの長さ、マシンの状態により変動します）。
@@ -205,6 +206,7 @@ ComfyUIの接続先は環境変数`COMFYUI_URL`で変更でき、未設定時は
 storyboard/
 ├── shots.json
 ├── shots.md
+├── characters/             # --character-refs指定時
 ├── shot_01.png ... shot_NN.png
 └── render_manifest.json
 ```

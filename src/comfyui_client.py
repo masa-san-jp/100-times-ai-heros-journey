@@ -19,7 +19,7 @@ import urllib.request
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Sequence
 
 
 class ComfyUIConfigurationError(ValueError):
@@ -45,6 +45,9 @@ class GeneratedImage:
 
 
 STORYBOARD_WORKFLOW_FILENAME = "storyboard_qwen_image_2_1_turbo_api_workflow.json"
+STORYBOARD_REFERENCE_WORKFLOW_FILENAME = (
+    "storyboard_qwen_image_2_1_turbo_reference_api_workflow.json"
+)
 
 WORKFLOW_CONFIGS: Dict[str, Dict[str, Any]] = {
     STORYBOARD_WORKFLOW_FILENAME: {
@@ -75,7 +78,47 @@ WORKFLOW_CONFIGS: Dict[str, Dict[str, Any]] = {
                 "loras": {"node": "10", "input": "lora_name"},
             },
         },
-    }
+    },
+    STORYBOARD_REFERENCE_WORKFLOW_FILENAME: {
+        "required_nodes": {
+            "1": "UNETLoader",
+            "2": "CLIPLoader",
+            "3": "VAELoader",
+            "5": "EmptyLatentImage",
+            "10": "ViggleTurboLora",
+            "11": "ViggleTurboSigmas",
+            "12": "BasicGuider",
+            "13": "KSamplerSelect",
+            "14": "RandomNoise",
+            "15": "SamplerCustomAdvanced",
+            "18": "TextEncodeQwenImage21",
+            "26": "LoadImage",
+            "27": "LoadImage",
+            "7": "VAEDecode",
+            "9": "SaveImage",
+        },
+        "injections": {
+            "positive_prompt": {"node": "18", "input": "prompt"},
+            "seed": {"node": "14", "input": "noise_seed"},
+            "width": {"node": "5", "input": "width"},
+            "height": {"node": "5", "input": "height"},
+            "reference_images": [
+                {"node": "26", "input": "image"},
+                {"node": "27", "input": "image"},
+            ],
+            "reference_connections": [
+                {"node": "18", "input": "images.image_1", "source": ["26", 0]},
+                {"node": "18", "input": "images.image_2", "source": ["27", 0]},
+            ],
+            "reference_encode_resolution": {"node": "18", "input": "resolution"},
+            "model_files": {
+                "diffusion_models": {"node": "1", "input": "unet_name"},
+                "text_encoders": {"node": "2", "input": "clip_name"},
+                "vae": {"node": "3", "input": "vae_name"},
+                "loras": {"node": "10", "input": "lora_name"},
+            },
+        },
+    },
 }
 
 
@@ -139,6 +182,8 @@ class ComfyUIImageGenerator:
         base_url: str,
         workflow_path: Path,
         model_files: Optional[list[Any]] = None,
+        reference_workflow_path: Optional[Path] = None,
+        reference_encode_resolution: Optional[int] = None,
         width: int = 720,
         height: int = 400,
         timeout_seconds: float = 600.0,
@@ -165,6 +210,10 @@ class ComfyUIImageGenerator:
 
         self.base_url = base_url.rstrip("/")
         self.workflow_path = Path(workflow_path)
+        self.reference_workflow_path = (
+            Path(reference_workflow_path) if reference_workflow_path else None
+        )
+        self.reference_encode_resolution = reference_encode_resolution
         self.model_files = list(model_files or [])
         self.width = width
         self.height = height
@@ -295,10 +344,13 @@ class ComfyUIImageGenerator:
         seed: int,
         width: Optional[int] = None,
         height: Optional[int] = None,
+        workflow_path: Optional[Path] = None,
+        reference_images: Optional[Sequence[str]] = None,
     ) -> Dict[str, Any]:
         """生成用の workflow を検証し、値を注入して返す。"""
-        workflow = copy.deepcopy(self._load_workflow())
-        injections = self._workflow_config()["injections"]
+        selected_path = workflow_path or self.workflow_path
+        workflow = copy.deepcopy(self._load_workflow(selected_path))
+        injections = self._workflow_config(selected_path)["injections"]
         model_file_names = self._model_file_names()
         targets = injections.get("model_files", {})
         for subdir, filename in model_file_names.items():
@@ -323,6 +375,35 @@ class ComfyUIImageGenerator:
                     f"Storyboard {role} must be a positive multiple of 16"
                 )
             self._require_input(workflow, injections.get(role), value, role)
+
+        if reference_images is not None:
+            if self.reference_encode_resolution is not None:
+                self._require_input(
+                    workflow,
+                    injections.get("reference_encode_resolution"),
+                    self.reference_encode_resolution,
+                    "reference encode resolution",
+                )
+            targets = injections.get("reference_images", [])
+            connections = injections.get("reference_connections", [])
+            if len(reference_images) > len(targets):
+                raise ComfyUIConfigurationError(
+                    f"Workflow supports at most {len(targets)} reference images"
+                )
+            for index, image_name in enumerate(reference_images):
+                self._require_input(
+                    workflow,
+                    targets[index],
+                    image_name,
+                    f"reference image {index + 1}",
+                )
+                connection = connections[index]
+                self._require_input(
+                    workflow,
+                    {"node": connection["node"], "input": connection["input"]},
+                    connection["source"],
+                    f"reference connection {index + 1}",
+                )
         return workflow
 
     _build_workflow = build_workflow
@@ -452,9 +533,28 @@ class ComfyUIImageGenerator:
         output_dir: Path,
         filename_stem: str,
         seed: Optional[int] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        reference_images: Optional[Sequence[Path]] = None,
     ) -> GeneratedImage:
         seed = self.seed_factory() if seed is None else seed
-        workflow = self.build_workflow(prompt, seed)
+        reference_names: Optional[list[str]] = None
+        workflow_path = self.workflow_path
+        if reference_images:
+            if self.reference_workflow_path is None:
+                raise ComfyUIConfigurationError(
+                    "Reference image generation is not configured for this profile"
+                )
+            reference_names = [self.upload_image(Path(path)) for path in reference_images]
+            workflow_path = self.reference_workflow_path
+        workflow = self.build_workflow(
+            prompt,
+            seed,
+            width=width,
+            height=height,
+            workflow_path=workflow_path,
+            reference_images=reference_names,
+        )
         prompt_id = self._queue(workflow)
         history = self._wait_for_history(prompt_id)
         image_bytes = self._download_image(self._first_image(history))

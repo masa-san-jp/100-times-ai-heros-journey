@@ -17,6 +17,7 @@ from tools import storyboard_smoke
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / "config/comfyui/storyboard_qwen_image_2_1_turbo_api_workflow.json"
+REFERENCE_WORKFLOW = ROOT / "config/comfyui/storyboard_qwen_image_2_1_turbo_reference_api_workflow.json"
 MODEL_FILES = load_storyboard_profile()["model_files"]
 
 
@@ -61,6 +62,37 @@ def test_workflow_injects_prompt_seed_dimensions_and_model_files():
     assert workflow["10"]["inputs"]["lora_name"] == (
         "Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r128.safetensors"
     )
+
+
+def test_reference_workflow_connects_one_or_two_images():
+    generator = ComfyUIImageGenerator(
+        "http://127.0.0.1:8188",
+        WORKFLOW,
+        reference_workflow_path=REFERENCE_WORKFLOW,
+        reference_encode_resolution=512,
+        model_files=MODEL_FILES,
+        opener=lambda *_args, **_kwargs: None,
+    )
+
+    one = generator.build_workflow(
+        "solo",
+        1,
+        workflow_path=REFERENCE_WORKFLOW,
+        reference_images=["protagonist.png"],
+    )
+    assert one["18"]["inputs"]["images.image_1"] == ["26", 0]
+    assert "images.image_2" not in one["18"]["inputs"]
+    assert one["18"]["inputs"]["resolution"] == 512
+
+    two = generator.build_workflow(
+        "duo",
+        2,
+        workflow_path=REFERENCE_WORKFLOW,
+        reference_images=["protagonist.png", "supporter.png"],
+    )
+    assert two["18"]["inputs"]["images.image_1"] == ["26", 0]
+    assert two["18"]["inputs"]["images.image_2"] == ["27", 0]
+    assert two["27"]["inputs"]["image"] == "supporter.png"
 
 
 def test_missing_required_workflow_node_is_configuration_error(tmp_path):
