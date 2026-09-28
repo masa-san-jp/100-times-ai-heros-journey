@@ -202,7 +202,8 @@ python render_storyboard.py output/batch_experiment-01 --runs 1,3-5 --seed 42
 `--shots-only`または画像生成の完了時には、画像一覧の`storyboard_sheet.png`とMarkdown形式の`storyboard.md`も出力されます。
 シートの列数は`--sheet-columns N`（既定値2）で変更できます。Pillowを導入していない環境では、シートだけを警告付きでスキップし、`storyboard.md`は出力します。
 `--force`を付けない限り、manifestの同じショットIDが成功済みで現在のpromptと一致する画像はスキップされるため、途中で中断しても同じコマンドを再実行できます。
-`--character-refs`を付けると、各ショットに登場するキャラクターだけの参照画像を`storyboard/characters/`に生成し、ショット生成に渡します。既存の参照画像は再利用され、参照画像の組み合わせが変わったショットは再生成されます。
+`--character-refs`は`off` / `closeup` / `all`を指定できます。既定値は`closeup`で、`close_up`または`medium`のショットだけに参照画像を渡します。`all`は全ショット、`off`は参照なしです。値なしの`--character-refs`は後方互換のため`all`として扱います。参照を使うショットに登場するキャラクターだけの参照画像を`storyboard/characters/`に生成し、既存の参照画像は再利用します。`shot_size`がない旧`shots.json`のショットは参照なしとして扱います。
+既定では参照画像の生成が走るため、参照画像1枚は約1〜2.7分です。#25の実測では、1ショットの生成時間は参照なし約59秒、1人参照約62秒、2人参照約83秒でした（モデル読み込みやマシンの状態により変動します）。参照workflowを持たないprofileでは、警告を表示して参照なしで続行します。
 ComfyUIの接続先は環境変数`COMFYUI_URL`で変更でき、未設定時は`http://127.0.0.1:8188`です。
 `--dry-run`は生成予定のショット数・プロンプト・推定時間を表示して終了します。`shots.json`がないrunでは、プロンプト表示のためLLMでショットリストを作成します。
 既定profileは720×400（16:9）です。M4 Maxで `examples/batch_full-gpt-oss-20b/run_001` の10ショットを生成した実測では、ショットリスト生成（`gpt-oss:20b`）が約5分、画像が1枚約47〜85秒でした（モデル読み込み、プロンプトの長さ、マシンの状態により変動します）。
@@ -220,7 +221,7 @@ storyboard/
 └── render_manifest.json
 ```
 
-`render_manifest.json`にはprofile、モデルファイル、解像度、各ショットのseed・prompt・所要秒数・成否・エラーが記録されます。
+`render_manifest.json`にはprofile、モデルファイル、解像度、各ショットのshot_size・参照使用有無・seed・prompt・所要秒数・成否・エラーが記録されます。
 
 既定の画像モデルは `qwen-image-2.1-turbo`（Qwen-Image 2.1 + Viggle 6ステップLoRA）です。
 ライセンスは [Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) で、利用目的は研究・評価に限られます。

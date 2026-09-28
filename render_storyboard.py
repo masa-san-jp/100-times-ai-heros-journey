@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Set
 
 from src.batch_analyzer import BatchAnalyzer, CompletedRun
 from src.comfyui_client import (
+    ComfyUIConfigurationError,
     ComfyUIConnectionError,
     ComfyUIImageGenerator,
     load_storyboard_profile,
@@ -173,10 +174,28 @@ def _resolve_reference_workflow_path(profile: Mapping[str, Any]) -> Optional[Pat
     return workflow if workflow.is_absolute() else Path(__file__).resolve().parent / workflow
 
 
-def _reference_roles(shots: Sequence[Mapping[str, Any]]) -> List[str]:
+def _character_ref_mode(args: argparse.Namespace) -> str:
+    value = getattr(args, "character_refs", "off")
+    if value is True:
+        return "all"
+    if value in (False, None):
+        return "off"
+    return str(value)
+
+
+def _shot_uses_character_references(shot: Mapping[str, Any], mode: str) -> bool:
+    if mode == "all":
+        return True
+    return mode == "closeup" and shot.get("shot_size") in {"close_up", "medium"}
+
+
+def _reference_roles(
+    shots: Sequence[Mapping[str, Any]], mode: str = "all"
+) -> List[str]:
     present = {
         str(role).strip()
         for shot in shots
+        if _shot_uses_character_references(shot, mode)
         for role in shot.get("characters", [])
         if str(role).strip() in ALLOWED_ROLES
     }
@@ -210,37 +229,55 @@ def _prepare_character_references(
     profile: Mapping[str, Any],
     args: argparse.Namespace,
 ) -> Dict[str, Path]:
-    if not getattr(args, "character_refs", False):
+    mode = _character_ref_mode(args)
+    if mode == "off":
+        return {}
+    roles = _reference_roles(shots, mode)
+    if not roles:
+        return {}
+    if not profile.get("reference_workflow_path"):
+        print(
+            "警告: このComfyUI profileには参照workflowがないため、参照なしで続行します。",
+            file=sys.stderr,
+        )
         return {}
     reference_dir = run.path / "storyboard" / "characters"
     references: Dict[str, Path] = {}
-    roles = _reference_roles(shots)
     missing_roles = [
         role for role in roles if not (reference_dir / f"{role}.png").exists()
     ]
     prompts = _read_character_visual_prompts(run.path) if missing_roles else {}
-    for role in roles:
-        path = reference_dir / f"{role}.png"
-        if not path.exists():
-            if role not in prompts:
-                raise RenderStoryboardError(
-                    f"visual_prompts.mdに{role}の外見文がありません: {run.path}"
+    try:
+        for role in roles:
+            path = reference_dir / f"{role}.png"
+            if not path.exists():
+                if role not in prompts:
+                    raise RenderStoryboardError(
+                        f"visual_prompts.mdに{role}の外見文がありません: {run.path}"
+                    )
+                generator.generate(
+                    _character_reference_prompt(prompts[role]),
+                    reference_dir,
+                    role,
+                    seed=_derive_seed(args.seed, run.path, f"character-{role}"),
+                    width=int(profile.get("reference_width", 448)),
+                    height=int(profile.get("reference_height", 768)),
                 )
-            generator.generate(
-                _character_reference_prompt(prompts[role]),
-                reference_dir,
-                role,
-                seed=_derive_seed(args.seed, run.path, f"character-{role}"),
-                width=int(profile.get("reference_width", 448)),
-                height=int(profile.get("reference_height", 768)),
-            )
-        references[role] = path
+            references[role] = path
+    except ComfyUIConfigurationError as exc:
+        print(
+            f"警告: ComfyUIの参照workflowを使えないため、参照なしで続行します: {exc}",
+            file=sys.stderr,
+        )
+        return {}
     return references
 
 
 def _shot_reference_paths(
-    shot: Mapping[str, Any], references: Mapping[str, Path]
+    shot: Mapping[str, Any], references: Mapping[str, Path], mode: str = "all"
 ) -> List[Path]:
+    if not _shot_uses_character_references(shot, mode):
+        return []
     return [
         references[role]
         for role in shot.get("characters", [])
@@ -269,19 +306,22 @@ def _new_manifest(
     run_dir: Path,
     seed: Optional[int],
     references: Optional[Mapping[str, Path]] = None,
+    mode: str = "all",
 ) -> Dict[str, Any]:
     references = references or {}
     entries = []
     for index, shot in enumerate(shots, start=1):
         shot_id = str(shot.get("id") or f"{index:02d}")
-        shot_references = _shot_reference_paths(shot, references)
+        shot_references = _shot_reference_paths(shot, references, mode)
         entries.append(
             {
                 "id": shot_id,
                 "filename": f"shot_{shot_id}.png",
                 "seed": _derive_seed(seed, run_dir, shot_id),
+                "shot_size": shot.get("shot_size"),
                 "prompt": _shot_render_prompt(shot, shot_references),
                 "references": [f"characters/{path.name}" for path in shot_references],
+                "references_used": bool(shot_references),
                 "elapsed_seconds": None,
                 "duration_seconds": None,
                 "success": None,
@@ -318,6 +358,7 @@ def _shot_entry(
     index: int,
     shot: Mapping[str, Any],
     references: Optional[Mapping[str, Path]] = None,
+    mode: str = "all",
 ) -> Dict[str, Any]:
     entries = manifest.setdefault("shots", [])
     while len(entries) <= index:
@@ -327,13 +368,15 @@ def _shot_entry(
         entry = {}
         entries[index] = entry
     shot_id = _shot_id(index, shot)
-    shot_references = _shot_reference_paths(shot, references or {})
+    shot_references = _shot_reference_paths(shot, references or {}, mode)
     entry.update(
         {
             "id": shot_id,
             "filename": f"shot_{shot_id}.png",
+            "shot_size": shot.get("shot_size"),
             "prompt": _shot_render_prompt(shot, shot_references),
             "references": [f"characters/{path.name}" for path in shot_references],
+            "references_used": bool(shot_references),
         }
     )
     return entry
@@ -391,6 +434,7 @@ def _render_run(
 ) -> int:
     storyboard_dir = run.path / "storyboard"
     manifest_path = storyboard_dir / "render_manifest.json"
+    mode = _character_ref_mode(args)
     references = _prepare_character_references(run, shot_list.shots, generator, profile, args)
     existing = _load_manifest(manifest_path)
     old_entries: Dict[str, Mapping[str, Any]] = {}
@@ -400,7 +444,7 @@ def _render_run(
             for item in existing["shots"]
             if isinstance(item, Mapping) and item.get("id") is not None
         }
-    manifest = _new_manifest(profile, shot_list.shots, run.path, args.seed, references)
+    manifest = _new_manifest(profile, shot_list.shots, run.path, args.seed, references, mode)
     for entry in manifest["shots"]:
         old_entry = old_entries.get(str(entry["id"]))
         if old_entry:
@@ -421,9 +465,9 @@ def _render_run(
     started = time.monotonic()
     total = len(shot_list.shots)
     for index, shot in enumerate(shot_list.shots):
-        entry = _shot_entry(manifest, index, shot, references)
+        entry = _shot_entry(manifest, index, shot, references, mode)
         shot_id = str(entry["id"])
-        shot_references = _shot_reference_paths(shot, references)
+        shot_references = _shot_reference_paths(shot, references, mode)
         render_prompt = _shot_render_prompt(shot, shot_references)
         reference_manifest_paths = [f"characters/{path.name}" for path in shot_references]
         if shot.get("status") == "failed":
@@ -507,12 +551,13 @@ def _render_run(
 
 def _print_dry_run(runs: Sequence[CompletedRun], shot_lists: Mapping[Path, Any], args: argparse.Namespace) -> None:
     pending = 0
+    mode = _character_ref_mode(args)
     for run in runs:
         shot_list = shot_lists[run.path]
         references = {
             role: run.path / "storyboard" / "characters" / f"{role}.png"
-            for role in _reference_roles(shot_list.shots)
-        } if getattr(args, "character_refs", False) else {}
+            for role in _reference_roles(shot_list.shots, mode)
+        }
         manifest = _load_manifest(run.path / "storyboard" / "render_manifest.json") or {}
         old_entries = {
             str(item["id"]): item
@@ -521,7 +566,7 @@ def _print_dry_run(runs: Sequence[CompletedRun], shot_lists: Mapping[Path, Any],
         }
         for index, shot in enumerate(shot_list.shots, start=1):
             shot_id = _shot_id(index - 1, shot)
-            shot_references = _shot_reference_paths(shot, references)
+            shot_references = _shot_reference_paths(shot, references, mode)
             render_prompt = _shot_render_prompt(shot, shot_references)
             reference_manifest_paths = [f"characters/{path.name}" for path in shot_references]
             if shot.get("status") == "failed" or _can_skip_image(
@@ -570,8 +615,11 @@ def _make_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--character-refs",
-        action="store_true",
-        help="登場キャラクターの参照画像を生成してショットに渡す",
+        nargs="?",
+        const="all",
+        choices=("off", "closeup", "all"),
+        default="closeup",
+        help="キャラクター参照の範囲（既定: closeup、値なし: all）",
     )
     parser.add_argument("--force", action="store_true")
     parser.add_argument(

@@ -1,91 +1,91 @@
 # ストーリーボード: 風の鼓音
 
-## 01. 風の囁きと川辺の静寂
+## 01. 灰色の町の路地
 
 ![shot_01.png](shot_01.png)
 
 - 章番号: 1 (章)
-- キャプション: 主人公は夕暮れの川辺で風の声に耳を傾け、未来への決意を固める。
-- 登場人物: protagonist, messenger
-- カメラ: medium close-up, low angle, dolly in, slight tilt, soft focus
+- キャプション: 主人公は灰色に染まった町の路地を歩き、数値の音色を耳にしていた。
+- 登場人物: protagonist
+- カメラ: extreme_long / wide angle, 24mm lens, steady tracking
 
-## 02. 風の触れ合い
+## 02. 夜風の中の約束
 
 ![shot_02.png](shot_02.png)
 
 - 章番号: 2 (章)
-- キャプション: 夜の街で、風の精が仁志の肩に触れ、彼の心に新たな風を吹き込む。
+- キャプション: 風の精が導く夜、主人公は静かな決意を抱く
 - 登場人物: protagonist, messenger
-- カメラ: medium close-up, low angle, slight tilt, rim lighting on the messenger, soft focus on the protagonist
+- カメラ: long / high angle, 24mm lens, slow tracking pan
 
-## 03. 拒絶の影
+## 03. 闇の中の拒絶
 
 ![shot_03.png](shot_03.png)
 
 - 章番号: 3 (章)
-- キャプション: 主人公は風の言葉を拒絶し、闇の影が迫る
+- キャプション: 夜の街並みで、仁志は風紋の使徒の言葉を拒絶し、黒川の影が忍び寄る瞬間を捉える。
 - 登場人物: protagonist, messenger
-- カメラ: tight close-up on the protagonist's face, low angle, with the messenger's silhouette in the background
+- カメラ: full / high angle, 24mm lens, slow push-in
 
-## 04. 風の導き
+## 04. 夕暮れの石畳と風の夢
 
 ![shot_04.png](shot_04.png)
 
 - 章番号: 4 (章)
-- キャプション: 依香が夢幻構築を示し、仁志は恐れを風に乗せて解き放つ
+- キャプション: 夕暮れの町並みを背景に、仁志と依香が夢幻構築を共有する場面
 - 登場人物: protagonist, supporter
-- カメラ: medium close‑up, slight tilt, shallow depth of field, rack focus on the dream map
+- カメラ: long / high angle, 35mm lens, steady dolly to the left
 
 ## 05. 壁に映る心の風景
 
 ![shot_05.png](shot_05.png)
 
 - 章番号: 5 (章)
-- キャプション: 二人の手が触れた瞬間、感情の風景が壁に映し出される。
+- キャプション: 二人が壁に触れ、感情の地図が光で描かれる瞬間
 - 登場人物: protagonist, supporter
-- カメラ: medium close‑up with slight dolly‑in, handheld tilt to capture the swirling colors
+- カメラ: medium / medium shot, 50mm lens, steadycam tracking slightly forward, subtle zoom to emphasize the glow
 
-## 06. 闇の中の決戦
+## 06. 闇夜の街角
 
 ![shot_06.png](shot_06.png)
 
 - 章番号: 6 (章)
-- キャプション: 主人公と黒川が闇の中で対峙し、依香の光が闇を切り裂く瞬間
-- 登場人物: protagonist, supporter
-- カメラ: medium close‑up on the protagonist with a Dutch angle to emphasize tension
+- キャプション: 黒川の影が迫る夜の街角で、仁志は小さく立つ。
+- 登場人物: protagonist, adversary
+- カメラ: extreme_long / high angle, 24mm wide-angle lens, slow tracking pan from left to right
 
-## 07. 闇の中の決意
+## 07. 鍵を握る瞬間
 
 ![shot_07.png](shot_07.png)
 
 - 章番号: 7 (章)
-- キャプション: 仁志は感情抑制網を切断し、風の鼓音に身を任せる。
-- 登場人物: protagonist, adversary
-- カメラ: medium close‑up, high angle, tracking shot
+- キャプション: 主人公は鍵を握り、感情の網を切断する決意を固める。
+- 登場人物: protagonist, messenger
+- カメラ: close_up / tight close-up, 50mm lens, slight handheld shake, eye-level
 
-## 08. 風の鼓音が響く瞬間
+## 08. 風の解放
 
 ![shot_08.png](shot_08.png)
 
 - 章番号: 8 (章)
-- キャプション: 仁志と依香が風の鼓音を受け、心の壁を打ち破る。
-- 登場人物: protagonist, supporter
-- カメラ: medium close-up with dolly-in, slight tilt, rack focus from supporter to protagonist
+- キャプション: ENSのコアが解放され、風が街を包み込む瞬間
+- 登場人物: protagonist, messenger
+- カメラ: long / high angle, 24mm lens, steady tracking
 
-## 09. 月明かりの帰路
+## 09. 風の鼓音を受け取る瞬間
 
 ![shot_09.png](shot_09.png)
 
 - 章番号: 9 (章)
-- キャプション: 主人公は月明かりに照らされた路地で、風の鼓音を受け取り、未来への決意を固める。
+- キャプション: 依香が手渡すインターフェースを受け取り、仁志の表情が温かさと決意に変わる。
 - 登場人物: protagonist, supporter
-- カメラ: tracking shot with a slight dolly-in, low angle to emphasize the protagonist's silhouette
+- カメラ: close_up / tight close-up, 50mm lens, slight tilt, handheld steady
 
-## 10. ENS制御室の風
+## 10. 夜の都市に吹く風
 
 ![shot_10.png](shot_10.png)
 
 - 章番号: 10 (章)
-- キャプション: 仁志は風の器を手に、街のデータネットワークに感情の風を吹き込む。
+- キャプション: ENS制御室の窓から見える街並みへ、風の鼓音が静かに流れ込む。
 - 登場人物: protagonist, supporter
-- カメラ: medium close-up with shallow depth of field, tracking to the instrument, then dolly out to reveal the control room
+- カメラ: extreme_long / wide angle, 24mm lens, steady crane shot from above

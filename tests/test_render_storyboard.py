@@ -374,3 +374,147 @@ def test_character_refs_select_zero_one_two_and_reuse_existing(tmp_path, monkeyp
     calls.clear()
     assert render_storyboard.main([str(run), "--images-only", "--character-refs"]) == 0
     assert calls == []
+
+
+def test_character_ref_modes_filter_shots_and_reference_roles(tmp_path, monkeypatch):
+    calls = []
+
+    class FakeComfy:
+        def __init__(self, **_kwargs):
+            pass
+
+        def check_connection(self):
+            pass
+
+        def generate(self, _prompt, output_dir, stem, seed=None, **kwargs):
+            calls.append((stem, kwargs.get("reference_images")))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / f"{stem}.png").write_bytes(b"PNG")
+            return SimpleNamespace(path=output_dir / f"{stem}.png", seed=seed)
+
+        def free_memory(self):
+            pass
+
+    profile = {
+        "name": "fake",
+        "width": 720,
+        "height": 400,
+        "workflow_path": "workflow.json",
+        "reference_workflow_path": "reference.json",
+        "reference_width": 448,
+        "reference_height": 768,
+        "model_files": [],
+    }
+    monkeypatch.setattr(render_storyboard, "load_storyboard_profile", lambda _name: profile)
+    monkeypatch.setattr(render_storyboard, "ComfyUIImageGenerator", FakeComfy)
+    monkeypatch.setattr(render_storyboard, "write_storyboard_outputs", lambda *args, **kwargs: None)
+
+    for mode, option, expected_refs, expected_roles in (
+        ("off", ["--character-refs", "off"], [[], [], [], []], []),
+        (
+            "closeup",
+            ["--character-refs", "closeup"],
+            [[], ["protagonist.png"], ["supporter.png"], []],
+            ["protagonist", "supporter"],
+        ),
+        (
+            "all",
+            ["--character-refs", "all"],
+            [["protagonist.png"], ["protagonist.png"], ["supporter.png"], ["adversary.png"]],
+            ["protagonist", "supporter", "adversary"],
+        ),
+    ):
+        run = _write_run(tmp_path, {"off": 1, "closeup": 2, "all": 3}[mode])
+        storyboard = run / "storyboard"
+        storyboard.mkdir()
+        (run / "visual_prompts.md").write_text(
+            "\n".join(
+                [
+                    "## protagonist",
+                    "Age: 22, dark hair.",
+                    "",
+                    "## supporter",
+                    "Age: 24, silver hair.",
+                    "",
+                    "## adversary",
+                    "Age: 30, red hair.",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        shots = [
+            {"id": "01", "prompt_en": "long", "shot_size": "long", "characters": ["protagonist"]},
+            {"id": "02", "prompt_en": "medium", "shot_size": "medium", "characters": ["protagonist"]},
+            {"id": "03", "prompt_en": "close", "shot_size": "close_up", "characters": ["supporter"]},
+            {"id": "04", "prompt_en": "full", "shot_size": "full", "characters": ["adversary"]},
+        ]
+        (storyboard / "shots.json").write_text(json.dumps({"shots": shots}), encoding="utf-8")
+        calls.clear()
+        assert render_storyboard.main([str(run), "--images-only", *option]) == 0
+        reference_calls = calls[: len(expected_roles)]
+        assert [stem for stem, _refs in reference_calls] == expected_roles
+        shot_calls = calls[len(expected_roles) :]
+        assert [[path.name for path in refs] if refs else [] for _stem, refs in shot_calls] == expected_refs
+        manifest = json.loads((storyboard / "render_manifest.json").read_text(encoding="utf-8"))
+        assert [entry["shot_size"] for entry in manifest["shots"]] == [
+            "long", "medium", "close_up", "full"
+        ]
+        assert [entry["references_used"] for entry in manifest["shots"]] == [
+            bool(refs) for refs in expected_refs
+        ]
+
+
+def test_character_refs_default_and_missing_reference_workflow_warns(tmp_path, monkeypatch, capsys):
+    run = _write_run(tmp_path, 1)
+    storyboard = run / "storyboard"
+    storyboard.mkdir()
+    (storyboard / "shots.json").write_text(
+        json.dumps(
+            {
+                "shots": [
+                    {"id": "01", "prompt_en": "long", "shot_size": "long", "characters": ["protagonist"]},
+                    {"id": "02", "prompt_en": "close", "shot_size": "close_up", "characters": ["protagonist"]},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    calls = []
+
+    class FakeComfy:
+        def __init__(self, **_kwargs):
+            pass
+
+        def check_connection(self):
+            pass
+
+        def generate(self, _prompt, output_dir, stem, seed=None, **kwargs):
+            calls.append(kwargs.get("reference_images"))
+            (output_dir / f"{stem}.png").write_bytes(b"PNG")
+            return SimpleNamespace(path=output_dir / f"{stem}.png", seed=seed)
+
+        def free_memory(self):
+            pass
+
+    monkeypatch.setattr(
+        render_storyboard,
+        "load_storyboard_profile",
+        lambda _name: {
+            "name": "fake",
+            "width": 720,
+            "height": 400,
+            "workflow_path": "workflow.json",
+            "model_files": [],
+        },
+    )
+    monkeypatch.setattr(render_storyboard, "ComfyUIImageGenerator", FakeComfy)
+    monkeypatch.setattr(render_storyboard, "write_storyboard_outputs", lambda *args, **kwargs: None)
+
+    args = render_storyboard._make_parser().parse_args([str(run)])
+    assert args.character_refs == "closeup"
+    assert render_storyboard._make_parser().parse_args(
+        [str(run), "--character-refs"]
+    ).character_refs == "all"
+    assert render_storyboard.main([str(run), "--images-only"]) == 0
+    assert calls == [None, None]
+    assert "参照workflowがないため、参照なしで続行します" in capsys.readouterr().err
