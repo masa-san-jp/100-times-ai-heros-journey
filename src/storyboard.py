@@ -20,9 +20,10 @@ from .llm_factory import create_provider_client
 
 
 ALLOWED_ROLES = ("protagonist", "messenger", "supporter", "adversary")
+SHOT_PLAN_PATH = Path(__file__).resolve().parent.parent / "config" / "storyboard" / "shot_plan.json"
 DEFAULT_STYLE = (
     "cinematic film still, widescreen 16:9 composition, photorealistic, "
-    "dramatic natural lighting, shallow depth of field, film grain, "
+    "dramatic natural lighting, film grain, "
     "no text, no watermark, full frame without letterbox bars"
 )
 
@@ -77,6 +78,24 @@ class _RunInput:
     chapter_count: Optional[int]
 
 
+def _load_shot_plan() -> Mapping[str, Any]:
+    try:
+        value = json.loads(SHOT_PLAN_PATH.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise StoryboardError(f"ショットサイズ設定を読み取れません: {SHOT_PLAN_PATH}") from exc
+    if not isinstance(value, Mapping):
+        raise StoryboardError(f"ショットサイズ設定の形式が不正です: {SHOT_PLAN_PATH}")
+    return value
+
+
+SHOT_PLAN = _load_shot_plan()
+SHOT_SIZES = tuple(str(item) for item in SHOT_PLAN.get("shot_sizes", ()))
+SHOT_PROMPT_PHRASES = {
+    str(key): str(value)
+    for key, value in SHOT_PLAN.get("prompt_phrases", {}).items()
+}
+
+
 def build_shot_list(
     run_dir: str | Path,
     client: Any,
@@ -109,9 +128,18 @@ def build_shot_list(
         if rebuild_prompts:
             source = _read_run_input(run_path)
             selected_unit = _cached_unit(source, cached.unit)
+            unit_indexes: Dict[int, int] = {}
             for shot in cached.shots:
                 if shot.get("status") == "failed":
                     continue
+                unit_number = shot.get(selected_unit)
+                shot_index = unit_indexes.get(unit_number, 0)
+                unit_indexes[unit_number] = shot_index + 1
+                plan_stage, shot_size = _shot_size_for_cached_shot(
+                    shot, cached, source, shot_index
+                )
+                shot["plan_stage"] = plan_stage
+                shot["shot_size"] = shot_size
                 shot["characters"] = _normalise_characters(shot.get("characters", []))
                 shot["prompt_en"] = _build_prompt(shot, source.visual_prompts, style)
             cached.style = style
@@ -378,6 +406,63 @@ def _units_for(source: _RunInput, selected_unit: str) -> List[Tuple[int, str, st
     return [(stage.number, f"{stage.number}. {stage.name}", stage.description) for stage in source.plot]
 
 
+def _stage_plan(stage_count: int) -> List[str]:
+    configured = SHOT_PLAN.get("stage_plans", {}).get(str(stage_count))
+    if isinstance(configured, list) and len(configured) == stage_count:
+        return [str(size) for size in configured]
+    if stage_count < 1:
+        raise StoryboardError("プロット段階数が1未満です。")
+    twelve_stage_plan = SHOT_PLAN.get("stage_plans", {}).get("12")
+    if not isinstance(twelve_stage_plan, list) or len(twelve_stage_plan) != 12:
+        raise StoryboardError(f"12段階のショットサイズ設定が不正です: {SHOT_PLAN_PATH}")
+    return [
+        str(twelve_stage_plan[min(12, max(1, round((index - 0.5) / stage_count * 12 + 0.5))) - 1])
+        for index in range(1, stage_count + 1)
+    ]
+
+
+def _plan_stage_for_unit(
+    selected_unit: str, unit_number: int, unit_count: int, stage_count: int
+) -> int:
+    if selected_unit == "stage":
+        return max(1, min(stage_count, unit_number))
+    return max(1, min(stage_count, round((unit_number - 0.5) / unit_count * stage_count + 0.5)))
+
+
+def _shot_sizes_for_unit(
+    selected_unit: str, unit_number: int, unit_count: int, stage_count: int, shots_per_unit: int
+) -> Tuple[int, List[str]]:
+    plan_stage = _plan_stage_for_unit(selected_unit, unit_number, unit_count, stage_count)
+    base_size = _stage_plan(stage_count)[plan_stage - 1]
+    base_index = SHOT_SIZES.index(base_size)
+    sizes = []
+    for shot_index in range(shots_per_unit):
+        if shot_index == 0:
+            size_index = base_index
+        else:
+            direction = 1 if shot_index % 2 else -1
+            size_index = max(0, min(len(SHOT_SIZES) - 1, base_index + direction))
+        sizes.append(SHOT_SIZES[size_index])
+    return plan_stage, sizes
+
+
+def _shot_size_for_cached_shot(
+    shot: Mapping[str, Any], cached: ShotList, source: _RunInput, shot_index: int
+) -> Tuple[int, str]:
+    unit_number = shot.get(cached.unit)
+    if not isinstance(unit_number, int) or isinstance(unit_number, bool):
+        raise StoryboardError(f"shots.jsonの{cached.unit}番号が不正です。")
+    unit_count = len(source.chapters) if cached.unit == "chapter" else len(source.plot)
+    plan_stage, sizes = _shot_sizes_for_unit(
+        cached.unit,
+        unit_number,
+        unit_count,
+        len(source.plot),
+        cached.shots_per_unit,
+    )
+    return plan_stage, sizes[min(shot_index, len(sizes) - 1)]
+
+
 def _cached_unit(source: _RunInput, cached_unit: str) -> str:
     if cached_unit not in ("chapter", "stage"):
         raise StoryboardError(f"shots.jsonのunitが不正です: {cached_unit}")
@@ -466,6 +551,14 @@ def _generate_unit_shots(
     style: str,
 ) -> List[Dict[str, Any]]:
     prompt_body = _body_for_prompt(body, client)
+    unit_count = len(source.chapters) if selected_unit == "chapter" else len(source.plot)
+    plan_stage, shot_sizes = _shot_sizes_for_unit(
+        selected_unit,
+        unit_number,
+        unit_count,
+        len(source.plot),
+        shots_per_unit,
+    )
     prompt = _shot_prompt(
         source,
         selected_unit,
@@ -473,6 +566,8 @@ def _generate_unit_shots(
         unit_label,
         prompt_body,
         shots_per_unit,
+        plan_stage,
+        shot_sizes,
     )
     response = _call_json_with_retry(
         client,
@@ -487,6 +582,8 @@ def _generate_unit_shots(
                 unit_number,
                 unit_label,
                 "JSON応答の取得または検証に失敗しました",
+                plan_stage,
+                shot_sizes[0],
             )
         ]
 
@@ -498,8 +595,10 @@ def _generate_unit_shots(
             file=sys.stderr,
         )
     result = []
-    for raw_shot in raw_shots:
+    for shot_index, raw_shot in enumerate(raw_shots):
         shot = _normalise_shot(raw_shot, selected_unit, unit_number, unit_label)
+        shot["plan_stage"] = plan_stage
+        shot["shot_size"] = shot_sizes[min(shot_index, len(shot_sizes) - 1)]
         shot["prompt_en"] = _build_prompt(shot, source.visual_prompts, style)
         result.append(shot)
     return result
@@ -534,6 +633,8 @@ def _shot_prompt(
     unit_label: str,
     body: str,
     shots_per_unit: int,
+    plan_stage: int,
+    shot_sizes: Sequence[str],
 ) -> str:
     plot = [
         {"stage": stage.number, "name": stage.name, "description": stage.description}
@@ -547,6 +648,10 @@ def _shot_prompt(
         }
         for role in ALLOWED_ROLES
     ]
+    shot_size_lines = "\n".join(
+        f"ショット{index + 1}: shot_size: {size}"
+        for index, size in enumerate(shot_sizes)
+    )
     return f"""作品タイトル: {source.title}
 
 プロット全体:
@@ -556,13 +661,19 @@ def _shot_prompt(
 {json.dumps(characters, ensure_ascii=False, indent=2)}
 
 対象ユニット: {selected_unit} / {unit_label}
+plan_stage: {plan_stage}
 対象ユニット本文:
 ---
 {body}
 ---
 
 対象ユニットからショットを{shots_per_unit}件作成してください。title_ja と caption_ja は日本語で書いてください。
+各ショットの shot_size はPython側で次の値に決定済みです。このサイズで成立する場面の setting / action を書いてください。
+{shot_size_lines}
+extreme_long / long は風景・建物・天候・群衆などの環境を主役にし、人物は画面の中で小さくしてください。
+close_up は表情や手元などの一点に絞ってください。full / medium は指定された画面範囲に合わせてください。
 setting / action / camera / mood は必ず英語で書いてください。camera と mood には映画撮影用語を使ってください。
+camera にはショットサイズを表す語を含めず、アングル・レンズ・カメラの動きだけを書いてください。ショットサイズは shot_size が正です。
 action の中で人物を指すときは名前を使わず、必ず the protagonist / the messenger / the supporter / the adversary の呼び名を使ってください。
 各ショットには、次のJSONキーだけを使ってください。
 {{
@@ -573,7 +684,7 @@ action の中で人物を指すときは名前を使わず、必ず the protagon
       "characters": ["protagonist"],
       "setting": "quiet riverside at dawn, clear sky",
       "action": "the protagonist looks across the river while the supporter watches from behind",
-      "camera": "wide establishing shot, low angle",
+      "camera": "low angle, 35mm lens, slow dolly",
       "mood": "cool blue pre-dawn light gradually warming to golden hour"
     }}
   ]
@@ -650,7 +761,9 @@ def _build_prompt(
     visual_prompts: Mapping[str, str],
     style: str,
 ) -> str:
-    parts = []
+    shot_size = str(shot.get("shot_size", "")).strip()
+    prompt_phrase = SHOT_PROMPT_PHRASES.get(shot_size)
+    parts = [prompt_phrase] if prompt_phrase else []
     setting = str(shot.get("setting", "")).strip()
     action = str(shot.get("action", "")).strip()
     camera = str(shot.get("camera", "")).strip()
@@ -665,6 +778,8 @@ def _build_prompt(
         parts.append(f"Mood and lighting: {mood}")
     for role in _normalise_characters(shot.get("characters", [])):
         appearance = _appearance_without_mood(visual_prompts.get(role, ""))
+        if shot_size in {"extreme_long", "long", "full"}:
+            appearance = _first_sentences(appearance, 2)
         if appearance:
             parts.append(f"The {role}: {appearance}")
     parts.append(style.strip())
@@ -682,8 +797,20 @@ def _appearance_without_mood(text: str) -> str:
     return "".join(kept).strip()
 
 
-def _failed_shot(selected_unit: str, unit_number: int, unit_label: str, error: str) -> Dict[str, Any]:
-    return {
+def _first_sentences(text: str, count: int) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    return " ".join(sentences[:count]).strip()
+
+
+def _failed_shot(
+    selected_unit: str,
+    unit_number: int,
+    unit_label: str,
+    error: str,
+    plan_stage: Optional[int] = None,
+    shot_size: Optional[str] = None,
+) -> Dict[str, Any]:
+    result = {
         selected_unit: unit_number,
         "title_ja": f"{unit_label}（生成失敗）",
         "caption_ja": "このユニットのショットは生成できませんでした。",
@@ -696,6 +823,11 @@ def _failed_shot(selected_unit: str, unit_number: int, unit_label: str, error: s
         "status": "failed",
         "error": error,
     }
+    if plan_stage is not None:
+        result["plan_stage"] = plan_stage
+    if shot_size is not None:
+        result["shot_size"] = shot_size
+    return result
 
 
 def _assign_ids(shots: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -766,7 +898,7 @@ def _write_markdown(result: ShotList) -> None:
                 f"- {unit_label}: {shot.get(result.unit, '')}",
                 f"- キャプション: {shot.get('caption_ja', '')}",
                 f"- 登場人物: {', '.join(shot.get('characters', [])) or 'なし'}",
-                f"- カメラ: {shot.get('camera', '')}",
+                f"- カメラ: {shot.get('shot_size', '')} / {shot.get('camera', '')}",
                 "",
             ]
         )

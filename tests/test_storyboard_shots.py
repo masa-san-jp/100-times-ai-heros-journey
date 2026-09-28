@@ -4,7 +4,14 @@ import json
 import shutil
 from pathlib import Path
 
-from src.storyboard import _read_run_input, build_shot_list
+from src.storyboard import (
+    _build_prompt,
+    _plan_stage_for_unit,
+    _read_run_input,
+    _shot_sizes_for_unit,
+    _stage_plan,
+    build_shot_list,
+)
 
 
 ROLES = ("protagonist", "messenger", "supporter", "adversary")
@@ -141,6 +148,12 @@ def test_prompt_is_deterministic_and_roles_are_limited(tmp_path):
 def test_rebuild_prompts_does_not_call_llm_or_change_cached_unit(tmp_path):
     run = _write_run(tmp_path)
     build_shot_list(run, FakeClient())
+    shots_path = run / "storyboard" / "shots.json"
+    cached = json.loads(shots_path.read_text(encoding="utf-8"))
+    for shot in cached["shots"]:
+        shot.pop("shot_size", None)
+        shot.pop("plan_stage", None)
+    shots_path.write_text(json.dumps(cached, ensure_ascii=False), encoding="utf-8")
 
     rebuilt = build_shot_list(
         run,
@@ -152,6 +165,8 @@ def test_rebuild_prompts_does_not_call_llm_or_change_cached_unit(tmp_path):
 
     assert rebuilt.unit == "chapter"
     assert rebuilt.shots[0]["prompt_en"].endswith("custom cinematic style")
+    assert rebuilt.shots[0]["shot_size"] == "full"
+    assert rebuilt.shots[0]["plan_stage"] == 1
 
 
 def test_chapter_count_mismatch_warns_and_uses_body_chapters(tmp_path, capsys):
@@ -208,3 +223,72 @@ def test_invalid_json_retries_and_failed_is_recorded(tmp_path):
     failed = build_shot_list(run, failed_client, refresh=True)
     assert len(failed_client.calls) == 4
     assert all(shot["status"] == "failed" for shot in failed.shots)
+
+
+def test_shot_plan_has_11_and_12_stage_mappings():
+    assert _stage_plan(12) == [
+        "extreme_long", "long", "close_up", "full", "long", "medium",
+        "extreme_long", "close_up", "full", "long", "close_up", "extreme_long",
+    ]
+    assert _stage_plan(11) == [
+        "extreme_long", "long", "close_up", "full", "long", "medium",
+        "close_up", "full", "long", "close_up", "extreme_long",
+    ]
+
+
+def test_chapter_plan_stage_mapping_for_10_12_and_3_chapters():
+    assert [_plan_stage_for_unit("chapter", i, 10, 12) for i in range(1, 11)] == [
+        1, 2, 4, 5, 6, 7, 8, 10, 11, 12
+    ]
+    assert [_plan_stage_for_unit("chapter", i, 12, 12) for i in range(1, 13)] == list(range(1, 13))
+    assert [_plan_stage_for_unit("chapter", i, 3, 12) for i in range(1, 4)] == [2, 6, 10]
+
+
+def test_shot_size_distribution_is_wide_for_12_stages_and_10_chapters():
+    stage_sizes = _stage_plan(12)
+    chapter_stages = [_plan_stage_for_unit("chapter", i, 10, 12) for i in range(1, 11)]
+    chapter_sizes = [stage_sizes[stage - 1] for stage in chapter_stages]
+    long_sizes = {"extreme_long", "long", "full"}
+    close_sizes = {"close_up"}
+
+    assert sum(size in long_sizes for size in stage_sizes) / len(stage_sizes) >= 0.5
+    assert sum(size in close_sizes for size in stage_sizes) / len(stage_sizes) <= 0.3
+    assert sum(size in long_sizes for size in chapter_sizes) / len(chapter_sizes) >= 0.5
+    assert sum(size in close_sizes for size in chapter_sizes) / len(chapter_sizes) <= 0.3
+
+
+def test_shots_per_unit_alternate_with_adjacent_sizes():
+    _plan_stage, sizes = _shot_sizes_for_unit("stage", 6, 12, 12, 4)
+    assert sizes == ["medium", "close_up", "full", "close_up"]
+
+
+def test_prompt_starts_with_size_phrase_and_shortens_distant_appearance():
+    visual = {
+        "protagonist": (
+            "Tall person with dark hair. Wears a blue coat. Has a silver scar. "
+            "Atmosphere: calm. Lighting: soft."
+        )
+    }
+    long_prompt = _build_prompt(
+        {
+            "shot_size": "long",
+            "setting": "open valley",
+            "action": "the protagonist waits",
+            "characters": ["protagonist"],
+            "camera": "low angle",
+            "mood": "dawn",
+        },
+        visual,
+        "film grain",
+    )
+    close_prompt = _build_prompt(
+        {"shot_size": "close_up", "characters": ["protagonist"]},
+        visual,
+        "film grain",
+    )
+
+    assert long_prompt.startswith("Long shot, full environment visible, small figures, deep focus")
+    assert "Tall person with dark hair. Wears a blue coat." in long_prompt
+    assert "Has a silver scar." not in long_prompt
+    assert close_prompt.startswith("Close-up on the face, shallow depth of field")
+    assert "Has a silver scar." in close_prompt

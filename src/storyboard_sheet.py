@@ -193,7 +193,7 @@ def write_storyboard_markdown(run_dir: str | Path, shot_list: Any) -> Path:
                 f"- 章番号: {chapter_number} ({chapter_label})",
                 f"- キャプション: {shot.get('caption_ja', '')}",
                 f"- 登場人物: {character_text}",
-                f"- カメラ: {shot.get('camera', '')}",
+                f"- カメラ: {shot.get('shot_size', '')} / {shot.get('camera', '')}",
                 "",
             ]
         )
