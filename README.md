@@ -214,7 +214,7 @@ ComfyUIの接続先は環境変数`COMFYUI_URL`で変更でき、未設定時は
 storyboard/
 ├── shots.json
 ├── shots.md
-├── characters/             # --character-refs指定時
+├── characters/             # 参照画像を使うショットがあるとき（既定の closeup を含む）
 ├── shot_01.png ... shot_NN.png
 ├── storyboard_sheet.png
 ├── storyboard.md
