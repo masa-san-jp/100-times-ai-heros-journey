@@ -7,7 +7,10 @@
       "height": 400,
       "timeout_seconds": 600,
       "workflow_path": "config/comfyui/storyboard_qwen_image_2_1_turbo_api_workflow.json",
-      "reference_workflow_path": null,
+      "reference_workflow_path": "config/comfyui/storyboard_qwen_image_2_1_turbo_reference_api_workflow.json",
+      "reference_width": 448,
+      "reference_height": 768,
+      "reference_encode_resolution": 512,
       "model_files": [
         {"subdir": "diffusion_models", "filename": "qwen_image_2.1_bf16.safetensors"},
         {"subdir": "text_encoders", "filename": "qwen3vl_8b_bf16.safetensors"},

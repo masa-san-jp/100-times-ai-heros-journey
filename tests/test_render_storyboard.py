@@ -299,3 +299,78 @@ def test_free_memory_failure_is_only_a_warning(tmp_path, monkeypatch, capsys):
 
     assert render_storyboard.main([str(run), "--images-only"]) == 0
     assert "ComfyUIのメモリ解放に失敗しました" in capsys.readouterr().err
+
+
+def test_character_refs_select_zero_one_two_and_reuse_existing(tmp_path, monkeypatch):
+    run = _write_run(tmp_path, 1)
+    storyboard = run / "storyboard"
+    storyboard.mkdir()
+    (run / "visual_prompts.md").write_text(
+        "\n".join(
+            [
+                "## protagonist",
+                "Age: 22, dark hair. Atmosphere: calm. Lighting: soft.",
+                "",
+                "## supporter",
+                "Age: 24, silver hair. Atmosphere: kind. Lighting: warm.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    shots = [
+        {"id": "01", "prompt_en": "landscape", "characters": []},
+        {"id": "02", "prompt_en": "solo", "characters": ["protagonist"]},
+        {"id": "03", "prompt_en": "duo", "characters": ["protagonist", "supporter"]},
+    ]
+    (storyboard / "shots.json").write_text(json.dumps({"shots": shots}), encoding="utf-8")
+    calls = []
+
+    class FakeComfy:
+        def __init__(self, **_kwargs):
+            pass
+
+        def check_connection(self):
+            pass
+
+        def generate(self, prompt, output_dir, stem, seed=None, **kwargs):
+            calls.append((prompt, stem, kwargs.get("reference_images")))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / f"{stem}.png").write_bytes(b"PNG")
+            return SimpleNamespace(path=output_dir / f"{stem}.png", seed=seed)
+
+        def free_memory(self):
+            pass
+
+    profile = {
+        "name": "fake",
+        "width": 720,
+        "height": 400,
+        "workflow_path": "workflow.json",
+        "reference_workflow_path": "reference.json",
+        "reference_width": 448,
+        "reference_height": 768,
+        "reference_encode_resolution": 512,
+        "model_files": [],
+    }
+    monkeypatch.setattr(render_storyboard, "load_storyboard_profile", lambda _name: profile)
+    monkeypatch.setattr(render_storyboard, "ComfyUIImageGenerator", FakeComfy)
+
+    assert render_storyboard.main([str(run), "--images-only", "--character-refs"]) == 0
+    assert [item[1] for item in calls] == ["protagonist", "supporter", "shot_01", "shot_02", "shot_03"]
+    assert calls[2][2] is None
+    assert [path.name for path in calls[3][2]] == ["protagonist.png"]
+    assert [path.name for path in calls[4][2]] == ["protagonist.png", "supporter.png"]
+    assert "The protagonist is the person in image 1." in calls[3][0]
+    assert "The supporter is the person in image 2." in calls[4][0]
+    assert "Atmosphere:" not in calls[0][0]
+    assert "Lighting:" not in calls[0][0]
+    manifest = json.loads((storyboard / "render_manifest.json").read_text(encoding="utf-8"))
+    assert [entry["references"] for entry in manifest["shots"]] == [
+        [],
+        ["characters/protagonist.png"],
+        ["characters/protagonist.png", "characters/supporter.png"],
+    ]
+
+    calls.clear()
+    assert render_storyboard.main([str(run), "--images-only", "--character-refs"]) == 0
+    assert calls == []
