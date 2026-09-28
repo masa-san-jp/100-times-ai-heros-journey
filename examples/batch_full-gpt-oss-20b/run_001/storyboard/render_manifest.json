@@ -1,0 +1,134 @@
+{
+  "profile": "qwen-image-2.1-turbo",
+  "model_files": [
+    "qwen_image_2.1_bf16.safetensors",
+    "qwen3vl_8b_bf16.safetensors",
+    "qwen_image_2.1_vae_bf16.safetensors",
+    "Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r128.safetensors"
+  ],
+  "width": 720,
+  "height": 400,
+  "character_references": {},
+  "shots": [
+    {
+      "id": "01",
+      "filename": "shot_01.png",
+      "seed": 4190759474102550445,
+      "prompt": "riverside at dusk, twilight sky, gentle river reflection, the protagonist sits on the riverbank, eyes closed, listening to the wind, while the messenger materializes behind him, whispering guidance, Camera: medium close-up, low angle, dolly in, slight tilt, soft focus, Mood and lighting: moody twilight, cinematic golden hour, subtle low-key lighting, atmospheric, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The messenger: Age: ageless, ethereal form, translucent wind spirit. Slender, swirling silhouette with flowing silver hair. Wears a light azure robe that drifts like mist. Carries a luminous silver key., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 133.09990745875984,
+      "duration_seconds": 133.09990745875984,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "02",
+      "filename": "shot_02.png",
+      "seed": 8895986185795987638,
+      "prompt": "dimly lit city street at night, neon reflections on wet pavement, the protagonist looks up as the messenger's translucent wind gently touches his shoulder, the wind swirling around his head, Camera: medium close-up, low angle, slight tilt, rim lighting on the messenger, soft focus on the protagonist, Mood and lighting: moody twilight with neon accents, cinematic chiaroscuro, subtle wind motion blur, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The messenger: Age: ageless, ethereal form, translucent wind spirit. Slender, swirling silhouette with flowing silver hair. Wears a light azure robe that drifts like mist. Carries a luminous silver key., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 67.33090658299625,
+      "duration_seconds": 67.33090658299625,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "03",
+      "filename": "shot_03.png",
+      "seed": 6166046897365834331,
+      "prompt": "dimly lit alley, neon signs, metallic surfaces, the protagonist turns his back, the messenger's wind swirling around him, the adversary's shadow looming in the background, Camera: tight close-up on the protagonist's face, low angle, with the messenger's silhouette in the background, Mood and lighting: high-contrast neon, cold metallic, tension, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The messenger: Age: ageless, ethereal form, translucent wind spirit. Slender, swirling silhouette with flowing silver hair. Wears a light azure robe that drifts like mist. Carries a luminous silver key., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 46.34036204172298,
+      "duration_seconds": 46.34036204172298,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "04",
+      "filename": "shot_04.png",
+      "seed": 2404948282182497006,
+      "prompt": "golden twilight town, stone pavement, soft wind, the supporter holds up the dream map, the protagonist watches, feeling the fear wave as the wind swirls, Camera: medium close‑up, slight tilt, shallow depth of field, rack focus on the dream map, Mood and lighting: warm golden light, gentle breeze, cinematic, evocative, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 80.84756333380938,
+      "duration_seconds": 80.84756333380938,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "05",
+      "filename": "shot_05.png",
+      "seed": 3522462762677981551,
+      "prompt": "night sky with stardust, illuminated ENS wall, subtle neon glow, the protagonist and the supporter reach out, their hands meeting the data wave on the wall, as the supporter whispers guidance, Camera: medium close‑up with slight dolly‑in, handheld tilt to capture the swirling colors, Mood and lighting: moody twilight with soft blue and amber hues, cinematic suspense, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 84.46134920837358,
+      "duration_seconds": 84.46134920837358,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "06",
+      "filename": "shot_06.png",
+      "seed": 1632278301023655514,
+      "prompt": "dark alley at night, swirling black clouds, neon flicker, the adversary summons a shadow, the protagonist grips the wind key, the supporter shines a dreamlight to cut the shadow, Camera: medium close‑up on the protagonist with a Dutch angle to emphasize tension, Mood and lighting: tense, low‑key lighting with sharp contrasts, cinematic darkness, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 55.60086741717532,
+      "duration_seconds": 55.60086741717532,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "07",
+      "filename": "shot_07.png",
+      "seed": 7233090875576343809,
+      "prompt": "dimly lit ENS control room, silver fiber net glows, the protagonist grips the silver key, the adversary's shadow looms behind, the messenger's voice echoes through the air, Camera: medium close‑up, high angle, tracking shot, Mood and lighting: tense, low‑key lighting with a cold blue hue, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The adversary: Age: 48, broad-shouldered, imposing. Dark slicked-back hair, sharp gray eyes. Wears a tailored black suit with crimson lapel. Holds a leather contract and a hidden dagger., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 47.72488958388567,
+      "duration_seconds": 47.72488958388567,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "08",
+      "filename": "shot_08.png",
+      "seed": 4724798124020217794,
+      "prompt": "ENS core release, city skyline with swirling wind, soft golden light, the protagonist feels the wind's vibration while the supporter smiles, the messenger appears beside them, the adversary watches from the shadows, Camera: medium close-up with dolly-in, slight tilt, rack focus from supporter to protagonist, Mood and lighting: epic, hopeful, luminous cinematic atmosphere, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 47.012844583019614,
+      "duration_seconds": 47.012844583019614,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "09",
+      "filename": "shot_09.png",
+      "seed": 46483445561804941,
+      "prompt": "moonlit alley, soft pinkish hue, faint streetlights, the protagonist walks along the alley, the supporter hands over the interface, the messenger's voice whispers in the wind, Camera: tracking shot with a slight dolly-in, low angle to emphasize the protagonist's silhouette, Mood and lighting: soft moonlit glow with a hint of neon, gentle wind sound, cinematic atmosphere, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 53.244441624730825,
+      "duration_seconds": 53.244441624730825,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    },
+    {
+      "id": "10",
+      "filename": "shot_10.png",
+      "seed": 594121554017897030,
+      "prompt": "dimly lit control room with glowing data panels, neon city lights reflected on wet floor, the protagonist places the wind instrument on the console while the supporter stands beside him, offering a reassuring smile, Camera: medium close-up with shallow depth of field, tracking to the instrument, then dolly out to reveal the control room, Mood and lighting: moody neon glow, low-key lighting, cinematic tension with a hint of hope, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "references": [],
+      "elapsed_seconds": 48.75562516693026,
+      "duration_seconds": 48.75562516693026,
+      "success": true,
+      "status": "skipped",
+      "error": null
+    }
+  ]
+}

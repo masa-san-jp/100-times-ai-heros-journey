@@ -1,0 +1,158 @@
+{
+  "title": "風の鼓音",
+  "unit": "chapter",
+  "shots_per_unit": 1,
+  "style": "cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+  "shots": [
+    {
+      "chapter": 1,
+      "title_ja": "風の囁きと川辺の静寂",
+      "caption_ja": "主人公は夕暮れの川辺で風の声に耳を傾け、未来への決意を固める。",
+      "characters": [
+        "protagonist",
+        "messenger"
+      ],
+      "setting": "riverside at dusk, twilight sky, gentle river reflection",
+      "action": "the protagonist sits on the riverbank, eyes closed, listening to the wind, while the messenger materializes behind him, whispering guidance",
+      "camera": "medium close-up, low angle, dolly in, slight tilt, soft focus",
+      "mood": "moody twilight, cinematic golden hour, subtle low-key lighting, atmospheric",
+      "prompt_en": "riverside at dusk, twilight sky, gentle river reflection, the protagonist sits on the riverbank, eyes closed, listening to the wind, while the messenger materializes behind him, whispering guidance, Camera: medium close-up, low angle, dolly in, slight tilt, soft focus, Mood and lighting: moody twilight, cinematic golden hour, subtle low-key lighting, atmospheric, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The messenger: Age: ageless, ethereal form, translucent wind spirit. Slender, swirling silhouette with flowing silver hair. Wears a light azure robe that drifts like mist. Carries a luminous silver key., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "01"
+    },
+    {
+      "chapter": 2,
+      "title_ja": "風の触れ合い",
+      "caption_ja": "夜の街で、風の精が仁志の肩に触れ、彼の心に新たな風を吹き込む。",
+      "characters": [
+        "protagonist",
+        "messenger"
+      ],
+      "setting": "dimly lit city street at night, neon reflections on wet pavement",
+      "action": "the protagonist looks up as the messenger's translucent wind gently touches his shoulder, the wind swirling around his head",
+      "camera": "medium close-up, low angle, slight tilt, rim lighting on the messenger, soft focus on the protagonist",
+      "mood": "moody twilight with neon accents, cinematic chiaroscuro, subtle wind motion blur",
+      "prompt_en": "dimly lit city street at night, neon reflections on wet pavement, the protagonist looks up as the messenger's translucent wind gently touches his shoulder, the wind swirling around his head, Camera: medium close-up, low angle, slight tilt, rim lighting on the messenger, soft focus on the protagonist, Mood and lighting: moody twilight with neon accents, cinematic chiaroscuro, subtle wind motion blur, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The messenger: Age: ageless, ethereal form, translucent wind spirit. Slender, swirling silhouette with flowing silver hair. Wears a light azure robe that drifts like mist. Carries a luminous silver key., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "02"
+    },
+    {
+      "chapter": 3,
+      "title_ja": "拒絶の影",
+      "caption_ja": "主人公は風の言葉を拒絶し、闇の影が迫る",
+      "characters": [
+        "protagonist",
+        "messenger"
+      ],
+      "setting": "dimly lit alley, neon signs, metallic surfaces",
+      "action": "the protagonist turns his back, the messenger's wind swirling around him, the adversary's shadow looming in the background",
+      "camera": "tight close-up on the protagonist's face, low angle, with the messenger's silhouette in the background",
+      "mood": "high-contrast neon, cold metallic, tension",
+      "prompt_en": "dimly lit alley, neon signs, metallic surfaces, the protagonist turns his back, the messenger's wind swirling around him, the adversary's shadow looming in the background, Camera: tight close-up on the protagonist's face, low angle, with the messenger's silhouette in the background, Mood and lighting: high-contrast neon, cold metallic, tension, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The messenger: Age: ageless, ethereal form, translucent wind spirit. Slender, swirling silhouette with flowing silver hair. Wears a light azure robe that drifts like mist. Carries a luminous silver key., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "03"
+    },
+    {
+      "chapter": 4,
+      "title_ja": "風の導き",
+      "caption_ja": "依香が夢幻構築を示し、仁志は恐れを風に乗せて解き放つ",
+      "characters": [
+        "protagonist",
+        "supporter"
+      ],
+      "setting": "golden twilight town, stone pavement, soft wind",
+      "action": "the supporter holds up the dream map, the protagonist watches, feeling the fear wave as the wind swirls",
+      "camera": "medium close‑up, slight tilt, shallow depth of field, rack focus on the dream map",
+      "mood": "warm golden light, gentle breeze, cinematic, evocative",
+      "prompt_en": "golden twilight town, stone pavement, soft wind, the supporter holds up the dream map, the protagonist watches, feeling the fear wave as the wind swirls, Camera: medium close‑up, slight tilt, shallow depth of field, rack focus on the dream map, Mood and lighting: warm golden light, gentle breeze, cinematic, evocative, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "04"
+    },
+    {
+      "chapter": 5,
+      "title_ja": "壁に映る心の風景",
+      "caption_ja": "二人の手が触れた瞬間、感情の風景が壁に映し出される。",
+      "characters": [
+        "protagonist",
+        "supporter"
+      ],
+      "setting": "night sky with stardust, illuminated ENS wall, subtle neon glow",
+      "action": "the protagonist and the supporter reach out, their hands meeting the data wave on the wall, as the supporter whispers guidance",
+      "camera": "medium close‑up with slight dolly‑in, handheld tilt to capture the swirling colors",
+      "mood": "moody twilight with soft blue and amber hues, cinematic suspense",
+      "prompt_en": "night sky with stardust, illuminated ENS wall, subtle neon glow, the protagonist and the supporter reach out, their hands meeting the data wave on the wall, as the supporter whispers guidance, Camera: medium close‑up with slight dolly‑in, handheld tilt to capture the swirling colors, Mood and lighting: moody twilight with soft blue and amber hues, cinematic suspense, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "05"
+    },
+    {
+      "chapter": 6,
+      "title_ja": "闇の中の決戦",
+      "caption_ja": "主人公と黒川が闇の中で対峙し、依香の光が闇を切り裂く瞬間",
+      "characters": [
+        "protagonist",
+        "supporter"
+      ],
+      "setting": "dark alley at night, swirling black clouds, neon flicker",
+      "action": "the adversary summons a shadow, the protagonist grips the wind key, the supporter shines a dreamlight to cut the shadow",
+      "camera": "medium close‑up on the protagonist with a Dutch angle to emphasize tension",
+      "mood": "tense, low‑key lighting with sharp contrasts, cinematic darkness",
+      "prompt_en": "dark alley at night, swirling black clouds, neon flicker, the adversary summons a shadow, the protagonist grips the wind key, the supporter shines a dreamlight to cut the shadow, Camera: medium close‑up on the protagonist with a Dutch angle to emphasize tension, Mood and lighting: tense, low‑key lighting with sharp contrasts, cinematic darkness, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "06"
+    },
+    {
+      "chapter": 7,
+      "title_ja": "闇の中の決意",
+      "caption_ja": "仁志は感情抑制網を切断し、風の鼓音に身を任せる。",
+      "characters": [
+        "protagonist",
+        "adversary"
+      ],
+      "setting": "dimly lit ENS control room, silver fiber net glows",
+      "action": "the protagonist grips the silver key, the adversary's shadow looms behind, the messenger's voice echoes through the air",
+      "camera": "medium close‑up, high angle, tracking shot",
+      "mood": "tense, low‑key lighting with a cold blue hue",
+      "prompt_en": "dimly lit ENS control room, silver fiber net glows, the protagonist grips the silver key, the adversary's shadow looms behind, the messenger's voice echoes through the air, Camera: medium close‑up, high angle, tracking shot, Mood and lighting: tense, low‑key lighting with a cold blue hue, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The adversary: Age: 48, broad-shouldered, imposing. Dark slicked-back hair, sharp gray eyes. Wears a tailored black suit with crimson lapel. Holds a leather contract and a hidden dagger., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "07"
+    },
+    {
+      "chapter": 8,
+      "title_ja": "風の鼓音が響く瞬間",
+      "caption_ja": "仁志と依香が風の鼓音を受け、心の壁を打ち破る。",
+      "characters": [
+        "protagonist",
+        "supporter"
+      ],
+      "setting": "ENS core release, city skyline with swirling wind, soft golden light",
+      "action": "the protagonist feels the wind's vibration while the supporter smiles, the messenger appears beside them, the adversary watches from the shadows",
+      "camera": "medium close-up with dolly-in, slight tilt, rack focus from supporter to protagonist",
+      "mood": "epic, hopeful, luminous cinematic atmosphere",
+      "prompt_en": "ENS core release, city skyline with swirling wind, soft golden light, the protagonist feels the wind's vibration while the supporter smiles, the messenger appears beside them, the adversary watches from the shadows, Camera: medium close-up with dolly-in, slight tilt, rack focus from supporter to protagonist, Mood and lighting: epic, hopeful, luminous cinematic atmosphere, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "08"
+    },
+    {
+      "chapter": 9,
+      "title_ja": "月明かりの帰路",
+      "caption_ja": "主人公は月明かりに照らされた路地で、風の鼓音を受け取り、未来への決意を固める。",
+      "characters": [
+        "protagonist",
+        "supporter"
+      ],
+      "setting": "moonlit alley, soft pinkish hue, faint streetlights",
+      "action": "the protagonist walks along the alley, the supporter hands over the interface, the messenger's voice whispers in the wind",
+      "camera": "tracking shot with a slight dolly-in, low angle to emphasize the protagonist's silhouette",
+      "mood": "soft moonlit glow with a hint of neon, gentle wind sound, cinematic atmosphere",
+      "prompt_en": "moonlit alley, soft pinkish hue, faint streetlights, the protagonist walks along the alley, the supporter hands over the interface, the messenger's voice whispers in the wind, Camera: tracking shot with a slight dolly-in, low angle to emphasize the protagonist's silhouette, Mood and lighting: soft moonlit glow with a hint of neon, gentle wind sound, cinematic atmosphere, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "09"
+    },
+    {
+      "chapter": 10,
+      "title_ja": "ENS制御室の風",
+      "caption_ja": "仁志は風の器を手に、街のデータネットワークに感情の風を吹き込む。",
+      "characters": [
+        "protagonist",
+        "supporter"
+      ],
+      "setting": "dimly lit control room with glowing data panels, neon city lights reflected on wet floor",
+      "action": "the protagonist places the wind instrument on the console while the supporter stands beside him, offering a reassuring smile",
+      "camera": "medium close-up with shallow depth of field, tracking to the instrument, then dolly out to reveal the control room",
+      "mood": "moody neon glow, low-key lighting, cinematic tension with a hint of hope",
+      "prompt_en": "dimly lit control room with glowing data panels, neon city lights reflected on wet floor, the protagonist places the wind instrument on the console while the supporter stands beside him, offering a reassuring smile, Camera: medium close-up with shallow depth of field, tracking to the instrument, then dolly out to reveal the control room, Mood and lighting: moody neon glow, low-key lighting, cinematic tension with a hint of hope, The protagonist: Age: 22, lean muscular build, sharp jawline, determined eyes. Dark brown short hair, slightly tousled. Wears a tailored charcoal suit with subtle deep blue accents, a silver ring on left hand. Holds a weathered leather notebook., The supporter: Age: 24, slender build, calm demeanor, kind eyes. Dark hair with silver streaks, tied in a loose knot. Wears a pastel violet dreamscape cloak with subtle star patterns. Holds a translucent dream map and a crystal orb., cinematic film still, widescreen 16:9 composition, photorealistic, dramatic natural lighting, shallow depth of field, film grain, no text, no watermark, full frame without letterbox bars",
+      "id": "10"
+    }
+  ]
+}
