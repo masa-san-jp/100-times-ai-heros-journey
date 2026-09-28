@@ -265,7 +265,9 @@ def test_shots_per_unit_alternate_with_adjacent_sizes():
 def test_prompt_starts_with_size_phrase_and_shortens_distant_appearance():
     visual = {
         "protagonist": (
-            "Tall person with dark hair. Wears a blue coat. Has a silver scar. "
+            "Age: 22, lean muscular build, determined eyes. "
+            "Dark brown short hair, slightly tousled. "
+            "Wears a tailored charcoal suit with a silver pin. "
             "Atmosphere: calm. Lighting: soft."
         )
     }
@@ -288,7 +290,18 @@ def test_prompt_starts_with_size_phrase_and_shortens_distant_appearance():
     )
 
     assert long_prompt.startswith("Long shot, full environment visible, small figures, deep focus")
-    assert "Tall person with dark hair. Wears a blue coat." in long_prompt
-    assert "Has a silver scar." not in long_prompt
+    assert "Dark brown short hair, slightly tousled." in long_prompt
+    assert "Wears a tailored charcoal suit with a silver pin." in long_prompt
+    assert "Age: 22, lean muscular build, determined eyes." not in long_prompt
     assert close_prompt.startswith("Close-up on the face, shallow depth of field")
-    assert "Has a silver scar." in close_prompt
+    assert "Age: 22, lean muscular build, determined eyes." in close_prompt
+
+    fallback_prompt = _build_prompt(
+        {
+            "shot_size": "full",
+            "characters": ["protagonist"],
+        },
+        {"protagonist": "Age: 22. Calm expression. Atmosphere: quiet."},
+        "film grain",
+    )
+    assert "Age: 22. Calm expression." in fallback_prompt

@@ -21,6 +21,32 @@ from .llm_factory import create_provider_client
 
 ALLOWED_ROLES = ("protagonist", "messenger", "supporter", "adversary")
 SHOT_PLAN_PATH = Path(__file__).resolve().parent.parent / "config" / "storyboard" / "shot_plan.json"
+APPEARANCE_CUE_WORDS = (
+    "wear",
+    "wears",
+    "wearing",
+    "dressed",
+    "hair",
+    "robe",
+    "cloak",
+    "suit",
+    "coat",
+    "jacket",
+    "dress",
+    "armor",
+    "uniform",
+    "silhouette",
+    "form",
+    "hold",
+    "holds",
+    "carry",
+    "carries",
+    "carrying",
+)
+_APPEARANCE_CUE_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(word) for word in APPEARANCE_CUE_WORDS) + r")\b",
+    re.IGNORECASE,
+)
 DEFAULT_STYLE = (
     "cinematic film still, widescreen 16:9 composition, photorealistic, "
     "dramatic natural lighting, film grain, "
@@ -779,7 +805,7 @@ def _build_prompt(
     for role in _normalise_characters(shot.get("characters", [])):
         appearance = _appearance_without_mood(visual_prompts.get(role, ""))
         if shot_size in {"extreme_long", "long", "full"}:
-            appearance = _first_sentences(appearance, 2)
+            appearance = _appearance_excerpt(appearance, 2)
         if appearance:
             parts.append(f"The {role}: {appearance}")
     parts.append(style.strip())
@@ -800,6 +826,12 @@ def _appearance_without_mood(text: str) -> str:
 def _first_sentences(text: str, count: int) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
     return " ".join(sentences[:count]).strip()
+
+
+def _appearance_excerpt(text: str, count: int) -> str:
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    cued = [sentence for sentence in sentences if _APPEARANCE_CUE_RE.search(sentence)]
+    return " ".join((cued or sentences)[:count]).strip()
 
 
 def _failed_shot(
