@@ -45,3 +45,16 @@ max_chapter_continuations: 2
 - `gpt-oss:20b`: `num_ctx=16384`、推論モデル向けの出力枠。JSONモード非対応時の互換処理と、空本文時の有限リトライを有効化
 
 gpt-oss作例の所要時間は、本文生成後にビジュアルプロンプト工程だけを途中再開した時間を含みます。
+
+## ストーリーボード作例
+
+[風の鼓音](batch_full-gpt-oss-20b/run_001/storyboard/storyboard.md) について、`render_storyboard.py` で生成したストーリーボードを
+[`batch_full-gpt-oss-20b/run_001/storyboard/`](batch_full-gpt-oss-20b/run_001/storyboard/) に置いています。
+
+![風の鼓音 ストーリーボード](batch_full-gpt-oss-20b/run_001/storyboard/storyboard_sheet.png)
+
+- コマ数: 10（1章=1コマ）
+- ショットリスト: `gpt-oss:20b`
+- 画像: `qwen-image-2.1-turbo`（Qwen-Image 2.1 + Viggle 6ステップLoRA）、720×400、`--seed 42`、キャラクター参照なし
+- 実行環境: M4 Max、ComfyUI v0.37.4
+- 画像モデルのライセンス: [Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)（利用目的は研究・評価に限られます）
