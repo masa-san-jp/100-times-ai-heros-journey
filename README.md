@@ -58,11 +58,14 @@ AI創作の各工程に対応する関連リポジトリです。
 - 生成に使うOllamaモデル（未インストールの場合、CLIが明示指定モデルまたは既定モデルを自動取得します）
 
 Python依存関係は `requests` のみです。テストも実行する場合は開発依存関係を入れます。
+ストーリーボードシート（PNG）が必要な場合だけ、追加で `requirements-image.txt` を入れます。
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 python -m pip install -r requirements.txt
+# ストーリーボードシートも作る場合（任意）
+python -m pip install -r requirements-image.txt
 # テストも行う場合
 python -m pip install -r requirements-dev.txt
 ```
@@ -194,6 +197,8 @@ python render_storyboard.py output/batch_experiment-01 --runs 1,3-5 --seed 42
 ```
 
 ショットリストだけを作る場合は`--shots-only`、既存の`shots.json`から画像だけを作る場合は`--images-only`を使います。
+`--shots-only`または画像生成の完了時には、画像一覧の`storyboard_sheet.png`とMarkdown形式の`storyboard.md`も出力されます。
+シートの列数は`--sheet-columns N`（既定値2）で変更できます。Pillowを導入していない環境では、シートだけを警告付きでスキップし、`storyboard.md`は出力します。
 `--force`を付けない限り、manifestの同じショットIDが成功済みで現在のpromptと一致する画像はスキップされるため、途中で中断しても同じコマンドを再実行できます。
 `--character-refs`を付けると、各ショットに登場するキャラクターだけの参照画像を`storyboard/characters/`に生成し、ショット生成に渡します。既存の参照画像は再利用され、参照画像の組み合わせが変わったショットは再生成されます。
 ComfyUIの接続先は環境変数`COMFYUI_URL`で変更でき、未設定時は`http://127.0.0.1:8188`です。
@@ -208,10 +213,16 @@ storyboard/
 ├── shots.md
 ├── characters/             # --character-refs指定時
 ├── shot_01.png ... shot_NN.png
+├── storyboard_sheet.png
+├── storyboard.md
 └── render_manifest.json
 ```
 
 `render_manifest.json`にはprofile、モデルファイル、解像度、各ショットのseed・prompt・所要秒数・成否・エラーが記録されます。
+
+既定の画像モデルは `qwen-image-2.1-turbo`（Qwen-Image 2.1 + Viggle 6ステップLoRA）です。
+ライセンスは [Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) で、利用目的は研究・評価に限られます。
+モデルとライセンスの確認内容は兄弟リポジトリの [MODEL_LICENSES.md](https://github.com/masa-san-jp/100-times-ai-heroes/blob/main/docs/MODEL_LICENSES.md) にも記載しています。
 
 ## CLIオプション
 
@@ -316,6 +327,8 @@ output/
             ├── shots.json
             ├── shots.md
             ├── shot_01.png ... shot_NN.png
+            ├── storyboard_sheet.png
+            ├── storyboard.md
             └── render_manifest.json
 ```
 

@@ -29,6 +29,7 @@ from src.storyboard import (
     has_failed_shots,
     read_shot_list,
 )
+from src.storyboard_sheet import DEFAULT_COLUMNS, write_storyboard_outputs
 
 
 ESTIMATED_SECONDS_PER_IMAGE = 55.0
@@ -539,6 +540,13 @@ def _print_dry_run(runs: Sequence[CompletedRun], shot_lists: Mapping[Path, Any],
     print(f"推定所要時間: {pending * ESTIMATED_SECONDS_PER_IMAGE:.0f}秒（約55秒/枚で概算）")
 
 
+def _write_storyboard_outputs(
+    runs: Sequence[CompletedRun], shot_lists: Mapping[Path, Any], columns: int
+) -> None:
+    for run in runs:
+        write_storyboard_outputs(run.path, shot_lists[run.path], columns=columns)
+
+
 def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="完成済みrunからストーリーボード画像を生成")
     parser.add_argument("target", help="runディレクトリまたはバッチディレクトリ")
@@ -567,6 +575,12 @@ def _make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--sheet-columns",
+        type=int,
+        default=DEFAULT_COLUMNS,
+        help=f"ストーリーボードシートの列数（既定値: {DEFAULT_COLUMNS}）",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="生成予定を表示して終了（shots.jsonがないrunはLLMで作成）",
@@ -581,6 +595,8 @@ def run(args: argparse.Namespace) -> int:
         raise RenderStoryboardError("--shots-per-unitは1以上で指定してください")
     if args.timeout < 1:
         raise RenderStoryboardError("--timeoutは1以上で指定してください")
+    if args.sheet_columns < 1:
+        raise RenderStoryboardError("--sheet-columnsは1以上で指定してください")
 
     llm_client = None
     selected_model = "cache"
@@ -606,8 +622,15 @@ def run(args: argparse.Namespace) -> int:
             )
     print(f"ショットリスト準備完了: {len(runs)}作品（{selected_model}）")
 
-    if args.shots_only or args.dry_run:
-        _print_dry_run(runs, shot_lists, args) if args.dry_run else None
+    if args.shots_only:
+        _write_storyboard_outputs(runs, shot_lists, args.sheet_columns)
+        return 1 if any(
+            shot.get("status") == "failed"
+            for shot_list in shot_lists.values()
+            for shot in shot_list.shots
+        ) else 0
+    if args.dry_run:
+        _print_dry_run(runs, shot_lists, args)
         return 1 if any(
             shot.get("status") == "failed"
             for shot_list in shot_lists.values()
@@ -658,6 +681,8 @@ def run(args: argparse.Namespace) -> int:
             generator.free_memory()
         except Exception as exc:
             print(f"警告: ComfyUIのメモリ解放に失敗しました: {exc}", file=sys.stderr)
+
+    _write_storyboard_outputs(runs, shot_lists, args.sheet_columns)
 
     print(f"画像生成完了: 失敗 {failures}件")
     return 1 if failures else 0

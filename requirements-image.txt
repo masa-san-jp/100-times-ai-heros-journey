@@ -1,0 +1,2 @@
+# Optional image output dependencies
+Pillow>=10.1
