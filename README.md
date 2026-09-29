@@ -453,6 +453,21 @@ Colab版と同等の工程（分析 → 要素プール → 世界観 → キャ
 
 これらはClaudeがIssueを作成し、Codex（`gpt-5.6-luna`）が実装、Claudeがレビューとマージを行いました。
 
+### ストーリーボード画像生成の追加（2026年9月）
+
+生成した作品から、16:9のストーリーボード画像をローカルで作れるようになりました（`render_storyboard.py`、[#21](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/21)）。
+画像生成には、兄弟リポジトリ [100-times-ai-heroes](https://github.com/masa-san-jp/100-times-ai-heroes) と同じ ComfyUI + Qwen-Image 2.1 を使います。
+
+- 作品の各章から、場面・構図・登場人物をまとめたショットリスト（絵コンテ台本）を作成（[#23](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/23)）
+- ショットリストから720×400の画像を生成。作品単体とバッチに対応し、途中再開できる（[#22](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/22)、[#24](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/24)）
+- キャラクター参照画像を使い、コマ間で人物の見た目を揃える（[#25](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/25)）
+- 全コマを並べた一覧シート画像と `storyboard.md` を出力（[#26](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/26)）
+- 大ロングからクローズアップまでのショットサイズを物語の段階から割り当て、引きのショットを含める（[#32](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/32)、[#37](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/37)）
+- キャラクター参照は、クローズアップとミディアムのコマだけに使う（[#33](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/33)）
+- `gpt-oss:20b` 以外のモデルで生成した作品にも対応（[#38](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/38)）
+
+作例は [examples/batch_full-gpt-oss-20b/run_001/](examples/batch_full-gpt-oss-20b/run_001/) で読めます。
+
 ### 旧Colab版について
 
 `legacy/20250208-100-Times-AI-Heros-Journey-v.10.ipynb` が元のGoogle Colab版です。
