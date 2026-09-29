@@ -473,6 +473,7 @@ Colab版と同等の工程（分析 → 要素プール → 世界観 → キャ
 - 大ロングからクローズアップまでのショットサイズを物語の段階から割り当て、引きのショットを含める（[#32](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/32)、[#37](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/37)）
 - キャラクター参照は、クローズアップとミディアムのコマだけに使う（[#33](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/33)）
 - `gpt-oss:20b` 以外のモデルで生成した作品にも対応（[#38](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/38)）
+- ComfyUI・画像モデル・Viggle Turbo用カスタムノードを `setup_storyboard.py` で導入し、画像生成時にComfyUIを自動で起動・停止（[#48](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/48)）
 
 作例は [examples/batch_full-gpt-oss-20b/run_001/](examples/batch_full-gpt-oss-20b/run_001/) で読めます。
 
