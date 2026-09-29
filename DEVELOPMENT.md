@@ -8,21 +8,36 @@
 ```text
 .
 ├── run_pipeline.py             # 完全版CLI
+├── create_narrative.py         # 13項目のナラティブJSONを対話で作成
+├── analyze_batch.py            # バッチ横断の集計・振り返りレポート
+├── render_storyboard.py        # ストーリーボード画像の生成CLI
+├── setup_storyboard.py         # ComfyUI・画像モデル・カスタムノードの導入
 ├── example.py                  # 低レベルAPIの簡単な例
 ├── narrative.example.json      # 13項目の入力例
+├── config/
+│   ├── comfyui/                # 画像生成profileとComfyUI workflow
+│   └── storyboard/             # ショットサイズの割り当て表
 ├── src/
 │   ├── colab_pipeline.py       # 全工程のオーケストレーター
 │   ├── colab_features.py       # 世界観・骨子・ビジュアル等の補助生成
 │   ├── narrative_analyzer.py   # ナラティブ分析
+│   ├── narrative_interview.py  # 対話式ナラティブ作成
 │   ├── character_generator.py  # 4キャラクター生成
 │   ├── plot_generator.py       # 11/12段階プロット生成
 │   ├── story_generator.py      # 章執筆・タイトル・チェックポイント
+│   ├── batch_analyzer.py       # バッチ横断分析
+│   ├── storyboard.py           # ショットリスト生成と画像プロンプトの組み立て
+│   ├── storyboard_sheet.py     # 一覧シート画像とstoryboard.md
+│   ├── comfyui_client.py       # ComfyUI HTTPクライアント（localhost限定）
+│   ├── comfyui_runtime.py      # ComfyUIの自動起動・停止
+│   ├── llm_factory.py          # プロバイダー・モデルの選択
 │   ├── ollama_client.py        # Ollama HTTPクライアント
 │   ├── provider_clients.py     # OpenAI互換・Anthropicクライアント
 │   └── sheet_storage.py        # Worksheet互換の保存アダプター
-├── tests/                      # Ollamaへ接続しない自動テスト
+├── tools/storyboard_smoke.py   # 画像生成の動作確認（1枚生成）
+├── tests/                      # Ollama・ComfyUIへ接続しない自動テスト
 ├── docs/                       # 設計メモ
-└── examples/                   # 共有用の完全版作例
+└── examples/                   # 共有用の完全版作例（ストーリーボードを含む）
 ```
 
 ## セットアップ
