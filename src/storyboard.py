@@ -98,6 +98,8 @@ class _RunInput:
     run_dir: Path
     title: str
     plot: Tuple[_Stage, ...]
+    plot_context: str
+    stage_count: int
     chapters: Tuple[_Chapter, ...]
     character_names: Mapping[str, str]
     visual_prompts: Mapping[str, str]
@@ -267,12 +269,19 @@ def _read_run_input(run_dir: Path) -> _RunInput:
     title = _parse_title(body)
     if not title:
         raise StoryboardError("本文Markdownの1行目から作品タイトルを読み取れません。")
-    plot = tuple(_parse_plot(body))
-    if not plot:
-        raise StoryboardError(
-            "プロット節の段階が0件のため、章・段階どちらのユニットも作れません。"
-        )
     chapters = tuple(_parse_chapters(body))
+    plot = tuple(_parse_plot(body))
+    if plot:
+        plot_context = ""
+        stage_count = len(plot)
+    else:
+        stage_count, manifest_label = _fallback_stage_count(run_dir)
+        plot_context = _plot_section_text(body)[:2000]
+        print(
+            "警告: プロット節から段階を読み取れないため、"
+            f"{stage_count}段階として章単位の生成を続けます（{manifest_label}）。",
+            file=sys.stderr,
+        )
 
     character_names = metadata.get("character_names")
     if not isinstance(character_names, Mapping):
@@ -320,6 +329,8 @@ def _read_run_input(run_dir: Path) -> _RunInput:
         run_dir=run_dir,
         title=title,
         plot=plot,
+        plot_context=plot_context,
+        stage_count=stage_count,
         chapters=chapters,
         character_names={role: str(character_names[role]).strip() for role in ALLOWED_ROLES},
         visual_prompts=visual_prompts,
@@ -342,17 +353,66 @@ def _parse_plot(body: str) -> List[_Stage]:
     if start is None:
         return []
 
+    end = len(lines)
+    for index in range(start, len(lines)):
+        if re.match(r"^#\s+第\d+章", lines[index]) or re.match(
+            r"^##\s+メタ情報", lines[index]
+        ):
+            end = index
+            break
+
+    detail_start = next(
+        (index for index in range(start, end) if "【各段階の詳細】" in lines[index]),
+        None,
+    )
+    if detail_start is not None:
+        stages = _parse_stage_details(lines[detail_start + 1 : end])
+        if stages:
+            return stages
+
+    outline_end = detail_start if detail_start is not None else end
+    return _parse_plot_outline(lines[start:outline_end])
+
+
+def _parse_stage_details(lines: Sequence[str]) -> List[_Stage]:
+    heading_pattern = re.compile(r"^\s*(\d+)\.\s+(.+?)\s*[(（](第.幕)[)）]\s*$")
     stages: List[_Stage] = []
     current_number: Optional[int] = None
     current_name = ""
     current_description: List[str] = []
-    for line in lines[start:]:
-        if re.match(r"^#\s+第\d+章", line):
+    for line in lines:
+        if re.match(r"^#\s+第\d+章", line) or re.match(r"^##\s+メタ情報", line):
             break
-        if re.match(r"^##\s+メタ情報", line):
+        if re.search(r"【[^】]+】", line):
             break
-        if "【各段階の詳細】" in line:
-            break
+        match = heading_pattern.match(line)
+        if match:
+            if current_number is not None:
+                stages.append(_make_stage(current_number, current_name, current_description))
+            current_number = int(match.group(1))
+            raw_name = match.group(2).strip().strip("*").strip()
+            if ":" in raw_name or "：" in raw_name:
+                current_name, subtitle = re.split(r"[:：]", raw_name, maxsplit=1)
+                current_name = current_name.strip()
+                subtitle = subtitle.strip()
+                current_description = [f"{subtitle}。"] if subtitle else []
+            else:
+                current_name = raw_name
+                current_description = []
+            continue
+        if current_number is not None:
+            current_description.append(line)
+    if current_number is not None:
+        stages.append(_make_stage(current_number, current_name, current_description))
+    return [stage for stage in stages if stage.name and stage.description]
+
+
+def _parse_plot_outline(lines: Sequence[str]) -> List[_Stage]:
+    stages: List[_Stage] = []
+    current_number: Optional[int] = None
+    current_name = ""
+    current_description: List[str] = []
+    for line in lines:
         match = re.match(r"^\s*(\d+)\.\s+(?:\*\*)?(.+?)(?:\*\*)?\s*$", line)
         if match:
             if current_number is not None:
@@ -368,8 +428,32 @@ def _parse_plot(body: str) -> List[_Stage]:
     return [stage for stage in stages if stage.name and stage.description]
 
 
+def _plot_section_text(body: str) -> str:
+    heading = re.search(r"(?m)^##\s+プロット\s*$", body)
+    if heading is None:
+        return ""
+    end_match = re.search(r"(?m)^#\s+第\d+章|^##\s+メタ情報", body[heading.end() :])
+    end = heading.end() + end_match.start() if end_match else len(body)
+    return body[heading.end() : end]
+
+
+def _fallback_stage_count(run_dir: Path) -> Tuple[int, str]:
+    manifest_path = run_dir.parent / "batch_manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return 12, "batch_manifest.jsonがないため既定値12"
+
+    value: Any = manifest.get("journey_stage_count") if isinstance(manifest, Mapping) else None
+    if isinstance(manifest, Mapping) and isinstance(manifest.get("settings"), Mapping):
+        value = manifest["settings"].get("journey_stage_count", value)
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value, "batch_manifest.jsonのjourney_stage_count"
+    return 12, "batch_manifest.jsonの段階数が不正なため既定値12"
+
+
 def _make_stage(number: int, name: str, description: Sequence[str]) -> _Stage:
-    text = "\n".join(description).strip()
+    text = "\n".join(line.strip() for line in description if line.strip())
     return _Stage(number=number, name=name, description=text)
 
 
@@ -420,9 +504,15 @@ def _parse_visual_prompts(text: str) -> Dict[str, str]:
 
 def _select_unit(source: _RunInput, requested: str) -> str:
     if requested == "auto":
-        return "chapter" if source.chapters else "stage"
+        if source.chapters:
+            return "chapter"
+        if not source.plot:
+            raise StoryboardError("--unit stage はプロット段階がないrunでは使えません。")
+        return "stage"
     if requested == "chapter" and not source.chapters:
         raise StoryboardError("--unit chapter は章本文がないrunでは使えません。")
+    if requested == "stage" and not source.plot:
+        raise StoryboardError("--unit stage はプロット段階がないrunでは使えません。")
     return requested
 
 
@@ -483,7 +573,7 @@ def _shot_size_for_cached_shot(
         cached.unit,
         unit_number,
         unit_count,
-        len(source.plot),
+        source.stage_count,
         cached.shots_per_unit,
     )
     return plan_stage, sizes[min(shot_index, len(sizes) - 1)]
@@ -494,6 +584,8 @@ def _cached_unit(source: _RunInput, cached_unit: str) -> str:
         raise StoryboardError(f"shots.jsonのunitが不正です: {cached_unit}")
     if cached_unit == "chapter" and not source.chapters:
         raise StoryboardError("shots.jsonは章単位ですが、本文に章がありません。")
+    if cached_unit == "stage" and not source.plot:
+        raise StoryboardError("shots.jsonは段階単位ですが、本文にプロット段階がありません。")
     return cached_unit
 
 
@@ -582,7 +674,7 @@ def _generate_unit_shots(
         selected_unit,
         unit_number,
         unit_count,
-        len(source.plot),
+        source.stage_count,
         shots_per_unit,
     )
     prompt = _shot_prompt(
@@ -662,10 +754,14 @@ def _shot_prompt(
     plan_stage: int,
     shot_sizes: Sequence[str],
 ) -> str:
-    plot = [
-        {"stage": stage.number, "name": stage.name, "description": stage.description}
-        for stage in source.plot
-    ]
+    if source.plot:
+        plot = [
+            {"stage": stage.number, "name": stage.name, "description": stage.description}
+            for stage in source.plot
+        ]
+        plot_text = json.dumps(plot, ensure_ascii=False, indent=2)
+    else:
+        plot_text = source.plot_context
     characters = [
         {
             "role": role,
@@ -681,7 +777,7 @@ def _shot_prompt(
     return f"""作品タイトル: {source.title}
 
 プロット全体:
-{json.dumps(plot, ensure_ascii=False, indent=2)}
+{plot_text}
 
 登場人物（役割・名前・外見文）:
 {json.dumps(characters, ensure_ascii=False, indent=2)}

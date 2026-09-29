@@ -4,12 +4,16 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
+
 from src.storyboard import (
     _build_prompt,
+    _parse_plot,
     _plan_stage_for_unit,
     _read_run_input,
     _shot_sizes_for_unit,
     _stage_plan,
+    StoryboardError,
     build_shot_list,
 )
 
@@ -210,6 +214,96 @@ def test_example_run_structure_can_be_read_without_writing_examples(tmp_path):
     assert len(parsed.plot) == 12
     assert len(parsed.visual_prompts) == 4
     assert all(parsed.visual_prompts[role] for role in ROLES)
+
+
+def test_example_runs_parse_all_twelve_stage_details(tmp_path):
+    expected_names = [
+        "日常世界",
+        "冒険への呼びかけ",
+        "拒否",
+        "師との出会い",
+        "第一関門の突破",
+        "試練、仲間、敵",
+        "最も危険な場所への接近",
+        "最大の試練",
+        "報酬",
+        "帰路",
+        "復活",
+        "宝を持ち帰る",
+    ]
+    for batch_name in (
+        "batch_full-gpt-oss-20b",
+        "batch_full-qwen3.8-27b",
+        "batch_full-gemma4-e4b",
+    ):
+        source = Path("examples") / batch_name / "run_001"
+        run = tmp_path / batch_name / "run_001"
+        shutil.copytree(source, run)
+
+        parsed = _read_run_input(run)
+
+        assert len(parsed.plot) == 12
+        assert [stage.name for stage in parsed.plot] == expected_names
+
+
+def test_numbered_plot_outline_is_used_when_details_are_missing():
+    body = """# テスト作品
+
+## プロット
+
+【プロットアウトライン】
+**【ヒーローズ・ジャーニー12段階プロット】**
+
+1. **日常世界**
+日常の説明。
+2. **冒険への呼びかけ**
+呼びかけの説明。
+"""
+
+    parsed = _parse_plot(body)
+
+    assert [stage.name for stage in parsed] == ["日常世界", "冒険への呼びかけ"]
+
+
+def test_empty_plot_uses_manifest_stage_count_for_chapters_and_rejects_stages(
+    tmp_path, capsys
+):
+    run = _write_run(tmp_path, chapters=True)
+    body = """# テスト作品
+
+## プロット
+
+自由記述のプロット本文。
+
+# 第1章: はじまり
+第1章の本文。
+
+# 第2章: 変化
+第2章の本文。
+
+## メタ情報
+"""
+    (run / "story.md").write_text(body, encoding="utf-8")
+    (tmp_path / "batch_manifest.json").write_text(
+        json.dumps({"settings": {"journey_stage_count": 11}}), encoding="utf-8"
+    )
+
+    client = FakeClient()
+    result = build_shot_list(run, client, unit="chapter")
+
+    assert result.unit == "chapter"
+    assert "自由記述のプロット本文。" in client.calls[0]
+    assert "プロット全体:\n[]" not in client.calls[0]
+    assert "11段階" in capsys.readouterr().err
+
+    (tmp_path / "stage").mkdir()
+    stage_run = _write_run(tmp_path / "stage", chapters=True)
+    (stage_run / "story.md").write_text(body, encoding="utf-8")
+    (stage_run.parent / "batch_manifest.json").write_text(
+        json.dumps({"journey_stage_count": 12}), encoding="utf-8"
+    )
+    with pytest.raises(StoryboardError, match="--unit stage"):
+        build_shot_list(stage_run, FakeClient(), unit="stage")
 
 
 def test_invalid_json_retries_and_failed_is_recorded(tmp_path):
