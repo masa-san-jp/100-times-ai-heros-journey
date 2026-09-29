@@ -190,7 +190,19 @@ python analyze_batch.py output/batch_experiment-01 \
 
 画像生成には、兄弟リポジトリ [100-times-ai-heroes](https://github.com/masa-san-jp/100-times-ai-heroes) で導入した
 ComfyUIとViggle Turbo用カスタムノードが必要です。ComfyUIを起動した状態で、作品単体またはバッチを指定します。
-生成例は [風の鼓音のストーリーボード](examples/batch_full-gpt-oss-20b/run_001/) を参照してください。
+
+### 出力例
+
+作例「風の鼓音」（`gpt-oss:20b` で生成した10章の物語）から作った、全10コマのうちの4コマです。
+
+<table>
+<tr><td width="50%"><img src="examples/batch_full-gpt-oss-20b/run_001/storyboard/shot_01.png" alt="shot_01"><br><sub>第1章・大ロング　灰色の街並み</sub></td><td width="50%"><img src="examples/batch_full-gpt-oss-20b/run_001/storyboard/shot_04.png" alt="shot_04"><br><sub>第4章・ロング　夕暮れの石畳</sub></td></tr>
+<tr><td width="50%"><img src="examples/batch_full-gpt-oss-20b/run_001/storyboard/shot_05.png" alt="shot_05"><br><sub>第5章・ミディアム　壁の鼓音</sub></td><td width="50%"><img src="examples/batch_full-gpt-oss-20b/run_001/storyboard/shot_07.png" alt="shot_07"><br><sub>第7章・クローズアップ　風の鼓音</sub></td></tr>
+</table>
+
+全10コマは [風の鼓音のストーリーボード](examples/batch_full-gpt-oss-20b/run_001/) で、章ごとの本文の引用とあわせて読めます。
+
+### 使い方
 
 ```bash
 python render_storyboard.py output/batch_experiment-01/run_001
