@@ -48,8 +48,9 @@ gpt-oss作例の所要時間は、本文生成後にビジュアルプロンプ�
 
 ## ストーリーボード作例
 
-[風の鼓音](batch_full-gpt-oss-20b/run_001/storyboard/storyboard.md) について、`render_storyboard.py` で生成したストーリーボードを
+[風の鼓音](batch_full-gpt-oss-20b/run_001/) について、`render_storyboard.py` で生成したストーリーボードを
 [`batch_full-gpt-oss-20b/run_001/storyboard/`](batch_full-gpt-oss-20b/run_001/storyboard/) に置いています。
+章ごとに上から読めるストーリーボードは [batch_full-gpt-oss-20b/run_001/](batch_full-gpt-oss-20b/run_001/) の README です。
 
 ![風の鼓音 ストーリーボード](batch_full-gpt-oss-20b/run_001/storyboard/storyboard_sheet.png)
 

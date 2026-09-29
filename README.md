@@ -190,6 +190,7 @@ python analyze_batch.py output/batch_experiment-01 \
 
 画像生成には、兄弟リポジトリ [100-times-ai-heroes](https://github.com/masa-san-jp/100-times-ai-heroes) で導入した
 ComfyUIとViggle Turbo用カスタムノードが必要です。ComfyUIを起動した状態で、作品単体またはバッチを指定します。
+生成例は [風の鼓音のストーリーボード](examples/batch_full-gpt-oss-20b/run_001/) を参照してください。
 
 ```bash
 python render_storyboard.py output/batch_experiment-01/run_001
