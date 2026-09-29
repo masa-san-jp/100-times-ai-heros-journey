@@ -188,8 +188,16 @@ python analyze_batch.py output/batch_experiment-01 \
 
 ## ストーリーボードを作る
 
-画像生成には、兄弟リポジトリ [100-times-ai-heroes](https://github.com/masa-san-jp/100-times-ai-heroes) で導入した
-ComfyUIとViggle Turbo用カスタムノードが必要です。ComfyUIを起動した状態で、作品単体またはバッチを指定します。
+画像生成に必要な ComfyUI、Qwen Image 2.1、Viggle Turbo用カスタムノードは、次のコマンドで導入できます。
+モデルを含めてディスクを約33GB使い、Qwen Research License（研究・評価目的に限る）の確認が必要です。
+
+```bash
+python setup_storyboard.py
+```
+
+既存の ComfyUI（100-times-ai-heroes で導入済みのものを含む）は、`--comfyui-dir` で指定できます。既存 venv の依存は変更せず、必要な場合だけ `--update-deps` で導入します。
+モデルを後から導入する場合は `--skip-models`、予定だけ確認する場合は `--dry-run` を使います。
+ComfyUI は画像生成時に未起動なら自動起動・終了されます。
 
 ### 出力例
 
@@ -233,6 +241,8 @@ storyboard/
 ├── storyboard.md
 └── render_manifest.json
 ```
+
+セットアップ後の `.runtime/` には、ComfyUI本体、専用venv、`comfyui.json`、起動ログが保存されます。
 
 `render_manifest.json`にはprofile、モデルファイル、解像度、各ショットのshot_size・参照使用有無・seed・prompt・所要秒数・成否・エラーが記録されます。
 

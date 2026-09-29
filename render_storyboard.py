@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set
 
 from src.batch_analyzer import BatchAnalyzer, CompletedRun
+from src import comfyui_runtime
 from src.comfyui_client import (
     ComfyUIConfigurationError,
     ComfyUIConnectionError,
@@ -611,6 +612,12 @@ def _make_parser() -> argparse.ArgumentParser:
         default=os.getenv("COMFYUI_URL", "http://127.0.0.1:8188"),
         help="ComfyUI URL（既定値: COMFYUI_URL、未設定時は http://127.0.0.1:8188）",
     )
+    parser.add_argument(
+        "--start-comfyui",
+        choices=("auto", "never"),
+        default="auto",
+        help="未接続時のComfyUI自動起動（既定: auto）",
+    )
     parser.add_argument("--profile", default=None)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
@@ -707,28 +714,45 @@ def run(args: argparse.Namespace) -> int:
         height=int(profile["height"]),
         timeout_seconds=float(profile.get("timeout_seconds", 600)),
     )
+    runtime = comfyui_runtime.ComfyUIRuntime(args.comfyui_url)
+    connection_verified = False
     try:
-        generator.check_connection()
-    except ComfyUIConnectionError as exc:
-        print(
-            f"{exc}\n100-times-ai-heroes の python3 run_local.py 等で ComfyUI を起動してください。",
-            file=sys.stderr,
-        )
-        return 1
-    except Exception as exc:
-        raise RenderStoryboardError(f"ComfyUIへの接続確認に失敗しました: {exc}") from exc
+        try:
+            generator.check_connection()
+            connection_verified = True
+        except ComfyUIConnectionError:
+            if args.start_comfyui == "never":
+                raise RenderStoryboardError(
+                    "ComfyUIに接続できません。`python setup_storyboard.py` で導入・起動してください。"
+                )
+            try:
+                runtime.start()
+            except comfyui_runtime.ComfyUIRuntimeError as exc:
+                raise RenderStoryboardError(str(exc)) from exc
+            try:
+                generator.check_connection()
+            except ComfyUIConnectionError as exc:
+                raise RenderStoryboardError(
+                    f"ComfyUIへの接続確認に失敗しました: {exc}"
+                ) from exc
+            connection_verified = True
+        except Exception as exc:
+            raise RenderStoryboardError(f"ComfyUIへの接続確認に失敗しました: {exc}") from exc
 
-    failures = 0
-    try:
+        failures = 0
         for run_info in runs:
             failures += _render_run(run_info, shot_lists[run_info.path], generator, profile, args)
+    except RenderStoryboardError:
+        raise
     except Exception as exc:
         raise RenderStoryboardError(f"ComfyUI画像生成を開始できません: {exc}") from exc
     finally:
-        try:
-            generator.free_memory()
-        except Exception as exc:
-            print(f"警告: ComfyUIのメモリ解放に失敗しました: {exc}", file=sys.stderr)
+        if connection_verified:
+            try:
+                generator.free_memory()
+            except Exception as exc:
+                print(f"警告: ComfyUIのメモリ解放に失敗しました: {exc}", file=sys.stderr)
+        runtime.stop()
 
     _write_storyboard_outputs(runs, shot_lists, args.sheet_columns)
 

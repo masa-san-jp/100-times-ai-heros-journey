@@ -57,7 +57,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             args.prompt, args.out, "storyboard_smoke", seed=args.seed
         )
     except ComfyUIConnectionError as exc:
-        print(f"{exc}\n100-times-ai-heroes の python3 run_local.py 等で ComfyUI を起動してください。", file=sys.stderr)
+        print(
+            f"{exc}\nComfyUIが未導入の場合は `python setup_storyboard.py` で導入してください。",
+            file=sys.stderr,
+        )
         return 1
     except (ComfyUIConfigurationError, OSError, RuntimeError, TimeoutError) as exc:
         print(str(exc), file=sys.stderr)
