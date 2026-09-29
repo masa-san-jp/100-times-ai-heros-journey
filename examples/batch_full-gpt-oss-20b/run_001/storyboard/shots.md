@@ -1,71 +1,71 @@
 # ショットリスト: 風の鼓音
 
-## 01. 灰色の町の路地
+## 01. 灰色の街並み
 
 - 章: 1
-- キャプション: 主人公は灰色に染まった町の路地を歩き、数値の音色を耳にしていた。
+- キャプション: 主人公は灰色の街並みを歩きながら、風の数式を感じる。
 - 登場人物: protagonist
-- カメラ: extreme_long / wide angle, 24mm lens, steady tracking
+- カメラ: extreme_long / low angle, 35mm lens, slow dolly
 
-## 02. 夜風の中の約束
+## 02. 雨に濡れた都市の風
 
 - 章: 2
-- キャプション: 風の精が導く夜、主人公は静かな決意を抱く
+- キャプション: 風の使徒が漂う雨の夜、主人公は静かに立ち止まる。
 - 登場人物: protagonist, messenger
-- カメラ: long / high angle, 24mm lens, slow tracking pan
+- カメラ: long / high angle, 50mm lens, steady tracking
 
-## 03. 闇の中の拒絶
+## 03. 夜の工業街
 
 - 章: 3
-- キャプション: 夜の街並みで、仁志は風紋の使徒の言葉を拒絶し、黒川の影が忍び寄る瞬間を捉える。
-- 登場人物: protagonist, messenger
-- カメラ: full / high angle, 24mm lens, slow push-in
+- キャプション: 主人公は冷たい金属の街並みの中で、風紋の使徒の言葉を受け止める。
+- 登場人物: protagonist
+- カメラ: full / high angle, 24mm lens, slow dolly in
 
-## 04. 夕暮れの石畳と風の夢
+## 04. 夕暮れの石畳
 
 - 章: 4
-- キャプション: 夕暮れの町並みを背景に、仁志と依香が夢幻構築を共有する場面
+- キャプション: 風が吹き抜ける夕暮れの街並みで、仁志は小さな影として歩く。
 - 登場人物: protagonist, supporter
-- カメラ: long / high angle, 35mm lens, steady dolly to the left
+- カメラ: long / high angle, 50mm lens, slow tracking
 
-## 05. 壁に映る心の風景
+## 05. 壁の鼓音
 
 - 章: 5
-- キャプション: 二人が壁に触れ、感情の地図が光で描かれる瞬間
+- キャプション: 仁志と依香が壁に触れ、感情の地図が光で描かれる瞬間。
 - 登場人物: protagonist, supporter
-- カメラ: medium / medium shot, 50mm lens, steadycam tracking slightly forward, subtle zoom to emphasize the glow
+- カメラ: medium / eye-level, 50mm lens, slow push-in
 
-## 06. 闇夜の街角
+## 06. 闇の街角
 
 - 章: 6
-- キャプション: 黒川の影が迫る夜の街角で、仁志は小さく立つ。
+- キャプション: 黒川が闇を呼び、仁志は小さな光として立ち向かう。
 - 登場人物: protagonist, adversary
-- カメラ: extreme_long / high angle, 24mm wide-angle lens, slow tracking pan from left to right
+- カメラ: extreme_long / low angle, 35mm lens, slow dolly
 
-## 07. 鍵を握る瞬間
+## 07. 風の鼓音
 
 - 章: 7
-- キャプション: 主人公は鍵を握り、感情の網を切断する決意を固める。
-- 登場人物: protagonist, messenger
-- カメラ: close_up / tight close-up, 50mm lens, slight handheld shake, eye-level
+- キャプション: 仁志が羽根のような剣を握り、風の鼓音を感じる瞬間
+- 登場人物: protagonist
+- カメラ: close_up / tight close-up, 50mm lens, slight tilt, handheld
 
-## 08. 風の解放
+## 08. 風の鼓音
 
 - 章: 8
-- キャプション: ENSのコアが解放され、風が街を包み込む瞬間
-- 登場人物: protagonist, messenger
+- キャプション: ENSのコアが解放され、風が街を包み、主人公が一歩踏み出す瞬間
+- 登場人物: protagonist
 - カメラ: long / high angle, 24mm lens, steady tracking
 
-## 09. 風の鼓音を受け取る瞬間
+## 09. 風の鼓音を握る瞬間
 
 - 章: 9
-- キャプション: 依香が手渡すインターフェースを受け取り、仁志の表情が温かさと決意に変わる。
-- 登場人物: protagonist, supporter
-- カメラ: close_up / tight close-up, 50mm lens, slight tilt, handheld steady
+- キャプション: 仁志が風の鼓音を手に取り、温かな光を感じる
+- 登場人物: protagonist
+- カメラ: close_up / tight close-up, 85mm lens, slight tilt, handheld steady
 
-## 10. 夜の都市に吹く風
+## 10. 風の街灯
 
 - 章: 10
-- キャプション: ENS制御室の窓から見える街並みへ、風の鼓音が静かに流れ込む。
-- 登場人物: protagonist, supporter
-- カメラ: extreme_long / wide angle, 24mm lens, steady crane shot from above
+- キャプション: ENS制御室の光が街を照らす中、風が街へ舞い上がる。
+- 登場人物: protagonist
+- カメラ: extreme_long / high angle, 24mm lens, steady tracking
