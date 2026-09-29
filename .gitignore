@@ -70,6 +70,9 @@ mock_data/
 # Ollama関連（もしあれば）
 ollama_logs/
 
+# ComfyUI runtime, virtual environment, and logs
+.runtime/
+
 # バックアップファイル
 *.bak
 *.backup

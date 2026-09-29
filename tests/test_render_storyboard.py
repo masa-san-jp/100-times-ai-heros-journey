@@ -273,7 +273,104 @@ def test_connection_failure_is_actionable_and_does_not_free_memory(
 
     assert render_storyboard.main([str(run), "--images-only"]) == 1
     assert events == ["check"]
-    assert "100-times-ai-heroes の python3 run_local.py 等で ComfyUI を起動してください。" in capsys.readouterr().err
+    error = capsys.readouterr().err
+    assert "python setup_storyboard.py" in error
+    assert "--comfyui-dir" in error
+
+
+def test_start_comfyui_never_does_not_start_when_connection_fails(tmp_path, monkeypatch):
+    run = _write_run(tmp_path, 1)
+    _write_shots(run, 1)
+    events = []
+
+    class FakeComfy:
+        def __init__(self, **_kwargs):
+            pass
+
+        def check_connection(self):
+            events.append("check")
+            raise ComfyUIConnectionError("offline")
+
+        def free_memory(self):
+            events.append("free")
+
+    class FakeRuntime:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def start(self):
+            events.append("start")
+
+        def stop(self):
+            events.append("stop")
+
+    monkeypatch.setattr(render_storyboard, "load_storyboard_profile", lambda _name: {
+        "name": "fake", "width": 720, "height": 400,
+        "workflow_path": "workflow.json", "model_files": [],
+    })
+    monkeypatch.setattr(render_storyboard, "ComfyUIImageGenerator", FakeComfy)
+    monkeypatch.setattr(render_storyboard.comfyui_runtime, "ComfyUIRuntime", FakeRuntime)
+
+    assert render_storyboard.main([str(run), "--images-only", "--start-comfyui", "never"]) == 1
+    assert events == ["check", "stop"]
+
+
+def test_start_comfyui_auto_starts_and_stops_on_completion(tmp_path, monkeypatch):
+    run = _write_run(tmp_path, 1)
+    _write_shots(run, 1)
+    events = []
+
+    class FakeComfy:
+        def __init__(self, **_kwargs):
+            self.checks = 0
+
+        def check_connection(self):
+            self.checks += 1
+            events.append(f"check-{self.checks}")
+            if self.checks == 1:
+                raise ComfyUIConnectionError("offline")
+
+        def generate(self, _prompt, output_dir, stem, seed=None):
+            events.append("generate")
+            (output_dir / f"{stem}.png").write_bytes(b"PNG")
+            return SimpleNamespace(path=output_dir / f"{stem}.png", seed=seed)
+
+        def free_memory(self):
+            events.append("free")
+
+    class FakeRuntime:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def start(self):
+            events.append("start")
+
+        def stop(self):
+            events.append("stop")
+
+    monkeypatch.setattr(render_storyboard, "load_storyboard_profile", lambda _name: {
+        "name": "fake", "width": 720, "height": 400,
+        "workflow_path": "workflow.json", "model_files": [],
+    })
+    monkeypatch.setattr(render_storyboard, "ComfyUIImageGenerator", FakeComfy)
+    monkeypatch.setattr(render_storyboard.comfyui_runtime, "ComfyUIRuntime", FakeRuntime)
+
+    assert render_storyboard.main([str(run), "--images-only", "--start-comfyui", "auto"]) == 0
+    assert events == ["check-1", "start", "check-2", "generate", "free", "stop"]
+
+
+def test_shots_only_and_dry_run_do_not_create_runtime(tmp_path, monkeypatch):
+    run = _write_run(tmp_path, 1)
+    _write_shots(run, 1)
+    monkeypatch.setattr(
+        render_storyboard.comfyui_runtime,
+        "ComfyUIRuntime",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("runtime started")),
+    )
+    monkeypatch.setattr(render_storyboard, "write_storyboard_outputs", lambda *args, **kwargs: None)
+
+    assert render_storyboard.main([str(run), "--images-only", "--dry-run"]) == 0
+    assert render_storyboard.main([str(run), "--shots-only"]) == 0
 
 
 def test_free_memory_failure_is_only_a_warning(tmp_path, monkeypatch, capsys):
