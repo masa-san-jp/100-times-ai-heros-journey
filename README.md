@@ -412,7 +412,7 @@ Google Sheets保存用の `src/sheet_storage.py` は `gspread` のWorksheet互�
 
 ## 変遷
 
-コミット履歴・Issue・プルリクエストに基づく経緯です。開発にはClaude、GitHub Copilot、Codexも参加しています。
+コミット履歴・Issue・プルリクエストに基づく経緯です。
 
 ### Colabノートブック版（〜2025年）
 
@@ -430,7 +430,7 @@ Google Sheets保存用の `src/sheet_storage.py` は `gspread` のWorksheet互�
 - タスクごとに最適な推論の深さ（reasoning effort）を設定する
 
 その後、Ollama + `gpt-oss:20b` による完全ローカル版の基盤（[#3](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/3)）、タスク別の reasoning effort（[#5](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/5)）、
-`src/` 以下の本番実装（[#6](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/6)）が追加され、コードレビューに基づく修正とテストの追加（[#7](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/7)）が続きました。
+`src/` 以下の本番実装（[#6](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/6)）が追加され、修正とテストの追加（[#7](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/7)）が続きました。
 
 ### モデル選択の拡充（2026年3月）
 
