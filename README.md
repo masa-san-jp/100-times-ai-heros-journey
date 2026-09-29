@@ -451,8 +451,6 @@ Colab版と同等の工程（分析 → 要素プール → 世界観 → キャ
 - 生成済みバッチの作品一覧・頻度集計と、LLMによる横断パターン抽出を行う `analyze_batch.py`（[#12](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/12)）
 - Colabノートブックの `legacy/` への移動と、個人設定ファイルのGit管理からの除外（[#11](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/11)）
 
-これらはClaudeがIssueを作成し、Codex（`gpt-5.6-luna`）が実装、Claudeがレビューとマージを行いました。
-
 ### ストーリーボード画像生成の追加（2026年9月）
 
 生成した作品から、16:9のストーリーボード画像をローカルで作れるようになりました（`render_storyboard.py`、[#21](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/21)）。
