@@ -13,6 +13,33 @@
     "medium": "Medium shot, waist-up",
     "close_up": "Close-up on the face, shallow depth of field"
   },
+  "shot_settings": {
+    "extreme_long": {
+      "phrase": "Extreme long shot, vast establishing view of the environment, human figures are tiny and occupy less than one tenth of the frame height, deep focus",
+      "appearance_sentences": 1,
+      "environment_first": true
+    },
+    "long": {
+      "phrase": "Long shot, the whole environment is visible, figures are small and occupy about one third of the frame height, deep focus",
+      "appearance_sentences": 2,
+      "environment_first": true
+    },
+    "full": {
+      "phrase": "Full shot, head-to-toe figures within their surroundings",
+      "appearance_sentences": 2,
+      "environment_first": false
+    },
+    "medium": {
+      "phrase": "Medium shot, waist-up",
+      "appearance_sentences": "all",
+      "environment_first": false
+    },
+    "close_up": {
+      "phrase": "Close-up on the face, shallow depth of field",
+      "appearance_sentences": "all",
+      "environment_first": false
+    }
+  },
   "stage_plans": {
     "11": [
       "extreme_long",

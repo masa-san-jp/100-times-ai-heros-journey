@@ -43,8 +43,26 @@ APPEARANCE_CUE_WORDS = (
     "carries",
     "carrying",
 )
+APPEARANCE_CLOTHING_WORDS = (
+    "wear",
+    "wears",
+    "wearing",
+    "dressed",
+    "robe",
+    "cloak",
+    "suit",
+    "coat",
+    "jacket",
+    "dress",
+    "armor",
+    "uniform",
+)
 _APPEARANCE_CUE_RE = re.compile(
     r"\b(?:" + "|".join(re.escape(word) for word in APPEARANCE_CUE_WORDS) + r")\b",
+    re.IGNORECASE,
+)
+_APPEARANCE_CLOTHING_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(word) for word in APPEARANCE_CLOTHING_WORDS) + r")\b",
     re.IGNORECASE,
 )
 DEFAULT_STYLE = (
@@ -122,6 +140,7 @@ SHOT_PROMPT_PHRASES = {
     str(key): str(value)
     for key, value in SHOT_PLAN.get("prompt_phrases", {}).items()
 }
+SHOT_SETTINGS = SHOT_PLAN.get("shot_settings", {})
 
 
 def build_shot_list(
@@ -793,6 +812,8 @@ plan_stage: {plan_stage}
 各ショットの shot_size はPython側で次の値に決定済みです。このサイズで成立する場面の setting / action を書いてください。
 {shot_size_lines}
 extreme_long / long は風景・建物・天候・群衆などの環境を主役にし、人物は画面の中で小さくしてください。
+extreme_long / long の action は人物を主語にせず、地形・建物・天候などの環境を主語にしてください。例えば「a vast rain-soaked alley stretches toward the horizon as the protagonist, a small figure, walks away」のように、環境の広がりの中に人物の動作を置いてください。
+特に extreme_long / long の setting には、画面を埋める地形・建物群・空・天候・群衆・光源などの要素を具体的に書いてください。
 close_up は表情や手元などの一点に絞ってください。full / medium は指定された画面範囲に合わせてください。
 setting / action / camera / mood は必ず英語で書いてください。camera と mood には映画撮影用語を使ってください。
 camera にはショットサイズを表す語を含めず、アングル・レンズ・カメラの動きだけを書いてください。ショットサイズは shot_size が正です。
@@ -801,11 +822,11 @@ action の中で人物を指すときは名前を使わず、必ず the protagon
 {{
   "shots": [
     {{
-      "title_ja": "静かな川辺",
-      "caption_ja": "主人公は夜明けの川辺で、決意を新たにする。",
+      "title_ja": "雨の路地",
+      "caption_ja": "主人公は雨に濡れた路地の彼方へ歩み去る。",
       "characters": ["protagonist"],
-      "setting": "quiet riverside at dawn, clear sky",
-      "action": "the protagonist looks across the river while the supporter watches from behind",
+      "setting": "a vast rain-soaked alley stretching toward the horizon, dense buildings on both sides, storm clouds, distant crowd silhouettes, scattered lantern light",
+      "action": "a vast rain-soaked alley stretches toward the horizon as the protagonist, a small figure, walks away",
       "camera": "low angle, 35mm lens, slow dolly",
       "mood": "cool blue pre-dawn light gradually warming to golden hour"
     }}
@@ -884,7 +905,8 @@ def _build_prompt(
     style: str,
 ) -> str:
     shot_size = str(shot.get("shot_size", "")).strip()
-    prompt_phrase = SHOT_PROMPT_PHRASES.get(shot_size)
+    setting_config = _shot_setting(shot_size)
+    prompt_phrase = setting_config["phrase"]
     parts = [prompt_phrase] if prompt_phrase else []
     setting = str(shot.get("setting", "")).strip()
     action = str(shot.get("action", "")).strip()
@@ -892,20 +914,63 @@ def _build_prompt(
     mood = str(shot.get("mood", "")).strip()
     if setting:
         parts.append(setting)
-    if action:
-        parts.append(action)
-    if camera:
-        parts.append(f"Camera: {camera}")
-    if mood:
-        parts.append(f"Mood and lighting: {mood}")
+    if setting_config["environment_first"]:
+        _append_prompt_part(parts, mood, "Mood and lighting: ")
+        _append_prompt_part(parts, camera, "Camera: ")
+        if action:
+            parts.append(action)
+    else:
+        if action:
+            parts.append(action)
+        _append_prompt_part(parts, camera, "Camera: ")
+        _append_prompt_part(parts, mood, "Mood and lighting: ")
+    appearance_sentences = setting_config["appearance_sentences"]
     for role in _normalise_characters(shot.get("characters", [])):
         appearance = _appearance_without_mood(visual_prompts.get(role, ""))
-        if shot_size in {"extreme_long", "long", "full"}:
-            appearance = _appearance_excerpt(appearance, 2)
+        if appearance_sentences != "all":
+            appearance = _appearance_excerpt(
+                appearance,
+                appearance_sentences,
+                prioritize_clothing=appearance_sentences == 1,
+            )
         if appearance:
-            parts.append(f"The {role}: {appearance}")
+            if setting_config["distant_figure"]:
+                parts.append(f"The {role}, a tiny distant figure: {appearance}")
+            else:
+                parts.append(f"The {role}: {appearance}")
     parts.append(style.strip())
     return ", ".join(parts)
+
+
+def _append_prompt_part(parts: List[str], value: str, prefix: str) -> None:
+    if value:
+        parts.append(f"{prefix}{value}")
+
+
+def _shot_setting(shot_size: str) -> Dict[str, Any]:
+    """サイズ設定を読み、旧形式のshot_plan.jsonにも対応する。"""
+    configured = SHOT_SETTINGS.get(shot_size) if isinstance(SHOT_SETTINGS, Mapping) else None
+    if isinstance(configured, Mapping):
+        phrase = configured.get("phrase", SHOT_PROMPT_PHRASES.get(shot_size, ""))
+        appearance_sentences = configured.get("appearance_sentences", "all")
+        environment_first = configured.get("environment_first", False)
+        if appearance_sentences != "all" and (
+            not isinstance(appearance_sentences, int) or isinstance(appearance_sentences, bool)
+        ):
+            appearance_sentences = "all"
+        return {
+            "phrase": str(phrase),
+            "appearance_sentences": appearance_sentences,
+            "environment_first": bool(environment_first),
+            "distant_figure": shot_size == "extreme_long",
+        }
+
+    return {
+        "phrase": SHOT_PROMPT_PHRASES.get(shot_size, ""),
+        "appearance_sentences": 2 if shot_size in {"extreme_long", "long", "full"} else "all",
+        "environment_first": False,
+        "distant_figure": False,
+    }
 
 
 def _appearance_without_mood(text: str) -> str:
@@ -924,8 +989,14 @@ def _first_sentences(text: str, count: int) -> str:
     return " ".join(sentences[:count]).strip()
 
 
-def _appearance_excerpt(text: str, count: int) -> str:
+def _appearance_excerpt(
+    text: str, count: int, *, prioritize_clothing: bool = False
+) -> str:
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    if prioritize_clothing:
+        clothing = [sentence for sentence in sentences if _APPEARANCE_CLOTHING_RE.search(sentence)]
+        if clothing:
+            return clothing[0]
     cued = [sentence for sentence in sentences if _APPEARANCE_CUE_RE.search(sentence)]
     return " ".join((cued or sentences)[:count]).strip()
 

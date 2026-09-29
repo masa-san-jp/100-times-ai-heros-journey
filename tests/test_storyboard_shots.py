@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import src.storyboard as storyboard
 from src.storyboard import (
     _build_prompt,
     _parse_plot,
@@ -383,7 +384,9 @@ def test_prompt_starts_with_size_phrase_and_shortens_distant_appearance():
         "film grain",
     )
 
-    assert long_prompt.startswith("Long shot, full environment visible, small figures, deep focus")
+    assert long_prompt.startswith(
+        "Long shot, the whole environment is visible, figures are small and occupy about one third of the frame height, deep focus"
+    )
     assert "Dark brown short hair, slightly tousled." in long_prompt
     assert "Wears a tailored charcoal suit with a silver pin." in long_prompt
     assert "Age: 22, lean muscular build, determined eyes." not in long_prompt
@@ -399,3 +402,64 @@ def test_prompt_starts_with_size_phrase_and_shortens_distant_appearance():
         "film grain",
     )
     assert "Age: 22. Calm expression." in fallback_prompt
+
+
+def test_prompt_uses_size_settings_for_order_and_appearance_sentences():
+    visual = {
+        "protagonist": (
+            "Age: 22, lean build, determined eyes. "
+            "Dark brown short hair, slightly tousled. "
+            "Wears a tailored charcoal suit with a silver pin. "
+            "Carries a worn leather satchel."
+        )
+    }
+    shot = {
+        "shot_size": "extreme_long",
+        "setting": "a vast valley and distant city",
+        "action": "the valley stretches toward the horizon",
+        "camera": "high angle, 24mm lens",
+        "mood": "storm light",
+        "characters": ["protagonist"],
+    }
+
+    prompt = _build_prompt(shot, visual, "film grain")
+
+    assert prompt.startswith(
+        "Extreme long shot, vast establishing view of the environment, human figures are tiny and occupy less than one tenth of the frame height, deep focus"
+    )
+    assert prompt.index("a vast valley") < prompt.index("Mood and lighting: storm light")
+    assert prompt.index("Mood and lighting: storm light") < prompt.index("Camera: high angle")
+    assert prompt.index("Camera: high angle") < prompt.index("the valley stretches")
+    assert "The protagonist, a tiny distant figure: Wears a tailored charcoal suit" in prompt
+    assert "Dark brown short hair" not in prompt
+    assert "Age: 22" not in prompt
+
+    medium = _build_prompt({**shot, "shot_size": "medium"}, visual, "film grain")
+    assert "Age: 22, lean build, determined eyes." in medium
+    assert "Dark brown short hair, slightly tousled." in medium
+    assert "Wears a tailored charcoal suit with a silver pin." in medium
+    assert "Carries a worn leather satchel." in medium
+
+
+def test_old_shot_plan_prompt_keeps_legacy_behaviour(monkeypatch):
+    monkeypatch.setattr(storyboard, "SHOT_SETTINGS", {})
+    monkeypatch.setattr(storyboard, "SHOT_PROMPT_PHRASES", {"long": "Legacy long shot"})
+
+    prompt = _build_prompt(
+        {
+            "shot_size": "long",
+            "setting": "open valley",
+            "action": "the protagonist waits",
+            "camera": "low angle",
+            "mood": "dawn",
+            "characters": ["protagonist"],
+        },
+        {"protagonist": "Dark hair. Wears a dark coat. Age 22."},
+        "film grain",
+    )
+
+    assert prompt.startswith(
+        "Legacy long shot, open valley, the protagonist waits, Camera: low angle, Mood and lighting: dawn"
+    )
+    assert "The protagonist: Dark hair. Wears a dark coat." in prompt
+    assert "tiny distant figure" not in prompt
