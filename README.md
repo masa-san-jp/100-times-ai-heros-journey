@@ -195,7 +195,7 @@ python analyze_batch.py output/batch_experiment-01 \
 python setup_storyboard.py
 ```
 
-既存の ComfyUI（100-times-ai-heroes で導入済みのものを含む）は、`--comfyui-dir` で指定できます。既存 venv の依存は変更せず、必要な場合だけ `--update-deps` で導入します。
+既存の ComfyUI（100-times-ai-heroes で導入済みのものを含む）は、`--comfyui-dir` で指定できます（専用 venv が別の場所にある場合は `--comfyui-venv` も指定します）。既存 venv の依存は変更せず、必要な場合だけ `--update-deps` で導入します。
 モデルを後から導入する場合は `--skip-models`、予定だけ確認する場合は `--dry-run` を使います。
 ComfyUI は画像生成時に未起動なら自動起動・終了されます。
 
