@@ -188,6 +188,24 @@ python analyze_batch.py output/batch_experiment-01 \
 解釈を断定・診断せず、元ナラティブとの対応は問いの形で提示する設計です。`--num-ctx` はOllamaの
 分析用コンテキスト長で、本文が推定入力上限を超える場合は冒頭と末尾を残して中略し、警告を表示します。
 
+### 物語構造の異なるバッチを比べる
+
+同じナラティブから`--structure`を変えて生成した複数のバッチを、並べて比べられます。LLMは使いません。
+
+```bash
+python compare_batches.py output/batch_journey output/batch_kishotenketsu \
+  --output-dir output/comparison_journey-vs-kishotenketsu
+```
+
+`comparison_report.md`（人が読む版）と`comparison_report.json`（機械可読版）を出力します。内容は次のとおりです。
+- バッチごとの構造・段数・作品数・平均章数・プロット形式・モデル
+- 構造の段の並び
+- 選ばれた要素（want / ability / role / narrative）の頻度
+- 作品一覧と本文へのリンク
+
+構造の良し悪しは判定しません。各バッチの`narrative.json`が一致しない場合はエラーになります。異なるナラティブのバッチも比べる場合は`--allow-different-narratives`を付けてください。
+`structure`を記録していない以前のバッチは、`batch_manifest.json`の`journey_stage_count`から`journey-11` / `journey-12`として扱います。
+
 ## ストーリーボードを作る
 
 画像生成に必要な ComfyUI、Qwen Image 2.1、Viggle Turbo用カスタムノードは、次のコマンドで導入できます。
