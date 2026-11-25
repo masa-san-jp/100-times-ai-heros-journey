@@ -10,6 +10,7 @@
 ├── run_pipeline.py             # 完全版CLI
 ├── create_narrative.py         # 13項目のナラティブJSONを対話で作成
 ├── analyze_batch.py            # バッチ横断の集計・振り返りレポート
+├── compare_batches.py          # 構造の異なる複数バッチの比較レポート
 ├── render_storyboard.py        # ストーリーボード画像の生成CLI
 ├── setup_storyboard.py         # ComfyUI・画像モデル・カスタムノードの導入
 ├── example.py                  # 低レベルAPIの簡単な例
@@ -23,9 +24,10 @@
 │   ├── narrative_analyzer.py   # ナラティブ分析
 │   ├── narrative_interview.py  # 対話式ナラティブ作成
 │   ├── character_generator.py  # 4キャラクター生成
-│   ├── plot_generator.py       # 11/12段階プロット生成
+│   ├── plot_generator.py       # 物語構造の定義とプロット生成
 │   ├── story_generator.py      # 章執筆・タイトル・チェックポイント
 │   ├── batch_analyzer.py       # バッチ横断分析
+│   ├── batch_comparison.py     # 構造の異なる複数バッチの比較
 │   ├── storyboard.py           # ショットリスト生成と画像プロンプトの組み立て
 │   ├── storyboard_sheet.py     # 一覧シート画像とstoryboard.md
 │   ├── comfyui_client.py       # ComfyUI HTTPクライアント（localhost限定）
