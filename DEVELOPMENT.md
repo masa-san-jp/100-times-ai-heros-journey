@@ -101,7 +101,7 @@ python run_pipeline.py \
 ## 実装上の注意
 
 - `PipelineConfig.variation_count` は完成作品数、`pool_size` は候補プールのサイズです。
-- `journey_stage_count` は11または12、標準は12です。`chapter_count` の標準は10です。
+- `journey_stage_count` は11または12、標準は12です。物語構造は `structure`（`src/plot_generator.py` の `STORY_STRUCTURES` のキー）でも選べ、`journey_stage_count` と同時には指定できません。`chapter_count` の標準は10です。
 - 生成中の各runには `draft.json` と `chapter_progress.json` が保存され、再開時に利用されます。
 - 完成済みrunはフィンガープリントで重複判定されます。
 - gpt-ossは推論モデル特有の空本文・JSONモード差異があるため、クライアントに有限リトライと互換処理があります。

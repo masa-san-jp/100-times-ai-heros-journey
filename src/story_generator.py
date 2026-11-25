@@ -21,8 +21,7 @@ from .ollama_client import OllamaClient, OllamaConfig
 from .narrative_analyzer import NarrativeAnalyzer, NarrativeInput, NarrativeAnalysis
 from .character_generator import Character, CharacterGenerator, CharacterSet
 from .plot_generator import (
-    JOURNEY_STAGES,
-    JOURNEY_STAGES_12,
+    get_story_structure,
     PlotGenerator,
     Plot,
     PlotStage,
@@ -113,6 +112,7 @@ class StoryGenerator:
         journey_stage_count: int = 12,
         chapter_count: Optional[int] = 10,
         max_chapter_continuations: int = 2,
+        structure: Optional[str] = None,
     ) -> Story:
         """
         物語を生成
@@ -123,6 +123,7 @@ class StoryGenerator:
             journey_stage_count: ヒーローズ・ジャーニーの段階数（11または12）
             chapter_count: 執筆する章数。12段階・10章がColab版の標準形
             max_chapter_continuations: 章本文が上限に達した場合の最大継続回数
+            structure: 物語構造の名前。指定時は journey_stage_count より優先する
 
         Returns:
             完成した物語
@@ -140,6 +141,9 @@ class StoryGenerator:
             raise ValueError("journey_stage_count must be 11 or 12")
         if not isinstance(max_chapter_continuations, int) or max_chapter_continuations < 0:
             raise ValueError("max_chapter_continuations must be a non-negative integer")
+        story_structure = get_story_structure(
+            structure or f"journey-{journey_stage_count}"
+        )
 
         # ステップ1: ナラティブ分析
         logger.info("ステップ1: ナラティブ分析を開始")
@@ -159,11 +163,8 @@ class StoryGenerator:
             plot_type=plot_type,
             chapter_count=chapter_count,
             max_chapter_continuations=max_chapter_continuations,
-            stage_definitions=(
-                JOURNEY_STAGES_12
-                if journey_stage_count == 12
-                else JOURNEY_STAGES
-            ),
+            stage_definitions=story_structure.stages,
+            structure_label=story_structure.label,
         )
 
     def generate_from_components(
@@ -179,6 +180,7 @@ class StoryGenerator:
         chapter_count: Optional[int] = 10,
         stage_definitions: Optional[Sequence[Mapping[str, Any]]] = None,
         max_chapter_continuations: int = 2,
+        structure_label: Optional[str] = None,
         checkpoint_dir: Optional[Path] = None,
         plot_override: Optional[Plot] = None,
     ) -> Story:
@@ -211,6 +213,7 @@ class StoryGenerator:
                 world=world,
                 skeleton=plot_skeleton,
                 stage_definitions=stage_definitions,
+                structure_label=structure_label,
             )
         else:
             plot = plot_override

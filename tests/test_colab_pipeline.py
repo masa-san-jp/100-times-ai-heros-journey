@@ -424,3 +424,125 @@ def test_draft_checkpoint_round_trips_story_materials(tmp_path):
     assert draft["characters"].protagonist.name == "主人公"
     assert draft["plot"].stages[0].description == "展開1"
     assert draft["selected_elements"] == {"want": "つながり"}
+
+
+NEW_STRUCTURES = ("kishotenketsu-4", "story-circle-8", "save-the-cat-15")
+
+
+@pytest.mark.parametrize(
+    "structure_name",
+    NEW_STRUCTURES + ("journey-12", "journey-11"),
+)
+def test_plot_generator_returns_stage_count_of_each_structure(structure_name):
+    from src.plot_generator import get_story_structure
+
+    structure = get_story_structure(structure_name)
+    client = FakeClient()
+    plot = PlotGenerator(client).generate(
+        _characters(),
+        stage_definitions=structure.stages,
+        structure_label=structure.label,
+    )
+
+    assert len(plot.stages) == structure.stage_count
+    assert [stage.stage for stage in plot.stages] == [
+        s["stage"] for s in structure.stages
+    ]
+    assert [stage.act for stage in plot.stages] == [s["act"] for s in structure.stages]
+    assert f"{structure.label}{structure.stage_count}段階" in client.json_calls[0]
+    assert structure.stages[-1]["name"] in client.chat_calls[-1]
+
+
+def test_new_structures_have_documented_stage_names():
+    from src.plot_generator import get_story_structure
+
+    assert [s["name"] for s in get_story_structure("story-circle-8").stages] == [
+        "You", "Need", "Go", "Search", "Find", "Take", "Return", "Change",
+    ]
+    assert [s["name"] for s in get_story_structure("save-the-cat-15").stages] == [
+        "Opening Image", "Theme Stated", "Set-Up", "Catalyst", "Debate",
+        "Break into Two", "B Story", "Fun and Games", "Midpoint",
+        "Bad Guys Close In", "All Is Lost", "Dark Night of the Soul",
+        "Break into Three", "Finale", "Final Image",
+    ]
+    assert [s["name"] for s in get_story_structure("kishotenketsu-4").stages] == [
+        "起", "承", "転", "結",
+    ]
+    with pytest.raises(ValueError, match="unknown structure"):
+        get_story_structure("propp-31")
+
+
+def test_structure_config_validation():
+    assert PipelineConfig().structure_name == "journey-12"
+    assert PipelineConfig(journey_stage_count=11).structure_name == "journey-11"
+    assert PipelineConfig(structure="story-circle-8").story_structure.stage_count == 8
+    with pytest.raises(ValueError, match="structure must be one of"):
+        PipelineConfig(structure="unknown").validate()
+    with pytest.raises(ValueError, match="cannot be used together"):
+        PipelineConfig(structure="kishotenketsu-4", journey_stage_count=11).validate()
+
+
+def _structure_config(tmp_path, **kwargs):
+    values = dict(
+        pool_size=3,
+        variation_count=1,
+        write_chapters=False,
+        generate_world=False,
+        generate_skeleton=False,
+        generate_visual_prompts=False,
+        output_dir=str(tmp_path),
+        random_seed=42,
+    )
+    values.update(kwargs)
+    return PipelineConfig(**values)
+
+
+def test_pipeline_saves_structure_and_resume_reuses_it(tmp_path):
+    import json
+
+    first = ColabParityPipeline(client=FakeClient()).run(
+        _narrative(),
+        _structure_config(tmp_path, structure="save-the-cat-15", batch_id="structure"),
+    )
+    manifest = json.loads(
+        (first.output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["structure"] == "save-the-cat-15"
+    assert manifest["journey_stage_count"] == 15
+    assert len(first.stories[0].plot.stages) == 15
+
+    resumed = ColabParityPipeline(client=FakeClient()).run(
+        _narrative(),
+        _structure_config(
+            tmp_path,
+            output_dir="output",
+            variation_count=2,
+            resume_dir=str(first.output_dir),
+            deduplicate=False,
+        ),
+    )
+    assert [len(story.plot.stages) for story in resumed.stories] == [15]
+
+    with pytest.raises(ValueError, match="does not match"):
+        ColabParityPipeline(client=FakeClient()).run(
+            _narrative(),
+            _structure_config(
+                tmp_path,
+                output_dir="output",
+                variation_count=3,
+                structure="kishotenketsu-4",
+                resume_dir=str(first.output_dir),
+            ),
+        )
+
+
+def test_cli_rejects_structure_with_journey_stages(monkeypatch, capsys):
+    import run_pipeline
+
+    monkeypatch.setattr(
+        "sys.argv",
+        ["run_pipeline.py", "--structure", "kishotenketsu-4", "--journey-stages", "11"],
+    )
+    with pytest.raises(SystemExit):
+        run_pipeline.main()
+    assert "同時に指定できません" in capsys.readouterr().err

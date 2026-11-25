@@ -260,7 +260,8 @@ storyboard/
 | `--provider NAME` | `ollama` | `ollama` / `openai` / `anthropic` / `deepseek` |
 | `--loops N` | `1` | 完成作品の目標数 |
 | `--pool-size N` | `100` | 願望・能力・課題の候補数 |
-| `--journey-stages 11\|12` | `12` | ヒーローズ・ジャーニーの段階数 |
+| `--structure NAME` | `journey-12` | 物語構造。`journey-12` / `journey-11` / `story-circle-8` / `save-the-cat-15` / `kishotenketsu-4`（[生成される工程](#生成される工程)を参照） |
+| `--journey-stages 11\|12` | `12` | ヒーローズ・ジャーニーの段階数（互換用。`--structure journey-11` と同じ。`--structure`と同時には指定できません） |
 | `--chapter-count N` | `10` | 1作品の章数 |
 | `--resume DIR` | なし | 既存バッチを途中再開 |
 | `--batch-id NAME` | 自動生成 | `output/batch_NAME` として保存 |
@@ -306,7 +307,7 @@ python run_pipeline.py --list-models
 4. 物語世界
 5. 主人公、使者、援助者、敵対者
 6. プロット骨子A〜E
-7. ヒーローズ・ジャーニーの11または12段階プロット
+7. 選んだ物語構造（既定はヒーローズ・ジャーニー12段階）に沿ったプロット
 8. 指定章数の本文
 9. タイトル
 10. キャラクター別ビジュアルプロンプト
@@ -326,6 +327,32 @@ python run_pipeline.py --list-models
 10. 帰路
 11. 復活
 12. 宝を持ち帰る
+
+### 物語構造を選ぶ
+
+`--structure NAME`でプロットの構造を選べます。同じナラティブ・同じ人物から、構造を変えて物語を比べるための機能です。
+
+| 名前 | 構造 | 段数 | 段の名前 |
+|---|---|---:|---|
+| `journey-12`（既定） | ヒーローズ・ジャーニー | 12 | 上記の12段階 |
+| `journey-11` | ヒーローズ・ジャーニー（旧版） | 11 | 12段階から「最も危険な場所への接近」を除いたもの |
+| `story-circle-8` | ダン・ハーモンのストーリーサークル | 8 | You、Need、Go、Search、Find、Take、Return、Change |
+| `save-the-cat-15` | ブレイク・スナイダーのセーブ・ザ・キャット | 15 | Opening Image、Theme Stated、Set-Up、Catalyst、Debate、Break into Two、B Story、Fun and Games、Midpoint、Bad Guys Close In、All Is Lost、Dark Night of the Soul、Break into Three、Finale、Final Image |
+| `kishotenketsu-4` | 起承転結 | 4 | 起（導入）、承（展開）、転（転換・ひねり）、結（結果） |
+
+```bash
+python run_pipeline.py --structure story-circle-8 --loops 1 --pool-size 3 --no-chapters
+```
+
+- 追加した3構造の段の名前は、二次資料（Wikipedia と解説記事、確認日2026-11-25）によります。一次資料の確認は [arayashiki-kb のイシュー #39](https://github.com/masa-san-jp/arayashiki-kb/issues/39) で進めていて、終わったら名前を見直します。
+  - https://www.studiobinder.com/blog/dan-harmon-story-circle
+  - https://www.studiobinder.com/blog/save-the-cat-beat-sheet/
+  - https://en.wikipedia.org/wiki/Story_structure
+- 各段の幕（第一幕〜第三幕）は、セーブ・ザ・キャットの13〜15が第三幕であること以外は暫定です。
+- 選んだ構造は`batch_manifest.json`の`structure`に保存され、`--resume`ではその構造を使います。別の構造を指定して再開するとエラーになります。
+- 章数が段数より多い場合（例: 起承転結で10章）は、段数と同じ章数になります。
+- プロット骨子A〜E（`--no-skeleton`で省略可）はヒーローズ・ジャーニーを前提にした現行のままです。
+- ストーリーボードのショットサイズは、4・8・15段それぞれに並びを用意しています（`config/storyboard/shot_plan.json`）。
 
 自動評価やランキング機能は現在実装していません。
 

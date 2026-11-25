@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import random
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Set, Tuple
@@ -30,7 +30,7 @@ from .colab_features import (
 )
 from .narrative_analyzer import NarrativeAnalysis, NarrativeAnalyzer, NarrativeInput
 from .ollama_client import OllamaClient, OllamaConfig
-from .plot_generator import JOURNEY_STAGES, JOURNEY_STAGES_12
+from .plot_generator import STORY_STRUCTURES, StoryStructure, get_story_structure
 from .sheet_storage import append_row_by_columns, append_story
 from .story_generator import (
     ChapterGenerationError,
@@ -53,6 +53,8 @@ class PipelineConfig:
     generate_skeleton: bool = True
     generate_visual_prompts: bool = True
     journey_stage_count: int = 12
+    # 物語構造の名前（STORY_STRUCTURES のキー）。None なら journey_stage_count から決める。
+    structure: Optional[str] = None
     chapter_count: Optional[int] = 10
     max_chapter_continuations: int = 2
     output_dir: str = "output"
@@ -71,6 +73,13 @@ class PipelineConfig:
             raise ValueError("variation_count must be a positive integer")
         if self.journey_stage_count not in (11, 12):
             raise ValueError("journey_stage_count must be 11 or 12")
+        if self.structure is not None:
+            if self.structure not in STORY_STRUCTURES:
+                raise ValueError(
+                    f"structure must be one of: {', '.join(STORY_STRUCTURES)}"
+                )
+            if self.journey_stage_count != 12:
+                raise ValueError("structure and journey_stage_count cannot be used together")
         if self.chapter_count is not None:
             if not isinstance(self.chapter_count, int) or self.chapter_count < 1:
                 raise ValueError("chapter_count must be a positive integer")
@@ -92,6 +101,15 @@ class PipelineConfig:
         if self.max_attempts is not None:
             if not isinstance(self.max_attempts, int) or self.max_attempts < 1:
                 raise ValueError("max_attempts must be a positive integer")
+
+    @property
+    def structure_name(self) -> str:
+        """実際に使う物語構造の名前。"""
+        return self.structure or f"journey-{self.journey_stage_count}"
+
+    @property
+    def story_structure(self) -> StoryStructure:
+        return get_story_structure(self.structure_name)
 
 
 @dataclass(frozen=True)
@@ -172,6 +190,7 @@ class ColabParityPipeline:
         preparation = None
         if resumed and output_dir is not None:
             self._validate_resume_narrative(output_dir, narrative)
+            config = self._resume_structure(output_dir, config)
             preparation = self._load_preparation(output_dir)
 
         if preparation is not None:
@@ -233,11 +252,9 @@ class ColabParityPipeline:
             )
 
         stories = []
-        stage_definitions = (
-            JOURNEY_STAGES_12
-            if config.journey_stage_count == 12
-            else JOURNEY_STAGES
-        )
+        structure = config.story_structure
+        stage_definitions = structure.stages
+        logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
         while completed_count < config.variation_count and attempts < max_attempts:
             attempts += 1
             logger.info(
@@ -293,6 +310,7 @@ class ColabParityPipeline:
                     write_chapters=config.write_chapters,
                     chapter_count=config.chapter_count,
                     stage_definitions=stage_definitions,
+                    structure_label=structure.label,
                     max_chapter_continuations=config.max_chapter_continuations,
                     checkpoint_dir=checkpoint_dir,
                     plot_override=plot_override,
@@ -616,6 +634,30 @@ class ColabParityPipeline:
         return completed, fingerprints, next_index
 
     @staticmethod
+    def _resume_structure(output_dir: Path, config: PipelineConfig) -> PipelineConfig:
+        """再開時は、元のバッチと同じ物語構造を使う。"""
+        try:
+            manifest = json.loads(
+                (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError):
+            return config
+        saved = manifest.get("structure") if isinstance(manifest, dict) else None
+        if not saved:
+            return config
+        if saved not in STORY_STRUCTURES:
+            raise ValueError(f"batch_manifest.json has unknown structure: {saved}")
+        explicit = config.structure is not None or config.journey_stage_count != 12
+        if not explicit:
+            return replace(config, structure=saved)
+        if config.structure_name != saved:
+            raise ValueError(
+                f"resume structure {config.structure_name} does not match "
+                f"the original batch ({saved})"
+            )
+        return config
+
+    @staticmethod
     def _save_batch_manifest(
         output_dir: Path,
         config: PipelineConfig,
@@ -639,7 +681,9 @@ class ColabParityPipeline:
             "generate_world": config.generate_world,
             "generate_skeleton": config.generate_skeleton,
             "generate_visual_prompts": config.generate_visual_prompts,
-            "journey_stage_count": config.journey_stage_count,
+            "structure": config.structure_name,
+            # ストーリーボードは段数をこのキーから読むため、選んだ構造の段数を書く。
+            "journey_stage_count": config.story_structure.stage_count,
             "chapter_count": config.chapter_count,
             "max_chapter_continuations": config.max_chapter_continuations,
             "random_seed": config.random_seed,
