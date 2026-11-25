@@ -1,6 +1,7 @@
 # 100 Times AI Hero's Journey
 
 作家の自己ナラティブから、ヒーローズ・ジャーニー形式の物語を生成するPython CLI/APIです。
+物語構造は、ヒーローズ・ジャーニー（12段・11段）、ストーリーサークル（8段）、セーブ・ザ・キャット（15段）、起承転結（4段）から選べます（[物語構造を選ぶ](#物語構造を選ぶ)）。
 標準ではOllama上のローカルモデルを使うため、入力と生成物を外部APIへ送らずに実行できます。
 
 📖 **関連記事:** [noteの記事を読む](https://note.com/masa_san_jp/n/n33dead2ffc6f)
@@ -40,6 +41,7 @@ Joseph Campbell の「ヒーローズ・ジャーニー（英雄の旅）」理�
 | 1. 入力を作る | `create_narrative.py` | 13項目の自己ナラティブ `narrative.json` |
 | 2. 物語を生成する | `run_pipeline.py` | 分析・世界観・キャラクター・プロット・章本文・ビジュアルプロンプト |
 | 3. 生成結果を集計する | `analyze_batch.py` | 作品一覧、要素の頻度表、LLMによる横断パターンと問い（`batch_report.md`） |
+| 3'. 構造の違うバッチを比べる（任意） | `compare_batches.py` | 構造・段数・要素の頻度・作品一覧を並べた比較表（`comparison_report.md`） |
 | 4. ストーリーボードを作る | `render_storyboard.py` | ショットリストと16:9画像（`storyboard/`） |
 
 ## 兄弟リポジトリ
@@ -531,6 +533,16 @@ Colab版と同等の工程（分析 → 要素プール → 世界観 → キャ
 - ComfyUI・画像モデル・Viggle Turbo用カスタムノードを `setup_storyboard.py` で導入し、画像生成時にComfyUIを自動で起動・停止（[#48](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/48)）
 
 作例は [examples/batch_full-gpt-oss-20b/run_001/](examples/batch_full-gpt-oss-20b/run_001/) で読めます。
+
+### 物語構造の選択と比較（2026年11月）
+
+同じナラティブ・同じ人物から、異なる物語構造で物語を作って比べられるようになりました（[#51](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/51)）。
+
+- `--structure` で、ヒーローズ・ジャーニー（12段・11段）に加え、ストーリーサークル（8段）、セーブ・ザ・キャット（15段）、起承転結（4段）を選べる。段の名前と並びは構造の定義で固定し、ストーリーボードのショットサイズも段数ごとに割り当てる（[#52](https://github.com/masa-san-jp/100-times-ai-heros-journey/pull/52)）
+- プロット骨子A〜Eを、選んだ構造の段から作る（[#53](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/53)）
+- 構造の異なる複数のバッチを並べて比べる `compare_batches.py`（[#54](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/54)）
+
+プロップの31機能、ポルティの36状況、ヴォネガットの感情曲線は見送り、[#55](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/55) に記録しています。
 
 ### 旧Colab版について
 
