@@ -297,6 +297,7 @@ class ColabParityPipeline:
                         characters=characters,
                         world=skeleton_world,
                         plot_type=plot_spec,
+                        structure=structure,
                     )
 
             try:

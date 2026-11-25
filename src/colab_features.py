@@ -22,6 +22,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 from .character_generator import CharacterSet
 from .narrative_analyzer import NarrativeAnalysis, NarrativeInput
 from .ollama_client import OllamaClient
+from .plot_generator import StoryStructure
 
 
 def data_to_markdown(data: Any, indent: int = 0) -> str:
@@ -395,7 +396,11 @@ class PlotSkeleton:
 
 
 class PlotSkeletonGenerator:
-    """ヒーローズ・ジャーニーをA〜Eの骨子に分解して生成する。"""
+    """物語構造をA〜Eの骨子に分解して生成する。
+
+    既定はヒーローズ・ジャーニーの要件（PART_PROMPTS）。``structure`` に
+    ``skeleton_parts`` を持つ構造を渡すと、その構造の段から各部の要件を作る。
+    """
 
     PART_PROMPTS = {
         "A": "日常世界、非日常世界、主人公の欠落、予兆、使者、召喚を拒絶する要素、使者から得るもの",
@@ -405,6 +410,33 @@ class PlotSkeletonGenerator:
         "E": "新しい日常、主人公が得たもの、周囲への影響",
     }
 
+    # 構造の段から要件を作るときの、各部の物語上の役割。
+    PART_ROLES = {
+        "A": "物語の始まり",
+        "B": "展開",
+        "C": "山場",
+        "D": "出来事の決着",
+        "E": "結末。主人公と周囲の新しい状態",
+    }
+
+    @classmethod
+    def part_prompts(cls, structure: Optional[StoryStructure] = None) -> Dict[str, str]:
+        """骨子A〜Eの各部の要件を返す。"""
+        if structure is None or not structure.skeleton_parts:
+            return dict(cls.PART_PROMPTS)
+        by_number = {s["stage"]: s for s in structure.stages}
+        prompts = {}
+        for part in cls.PART_PROMPTS:
+            stages = "、".join(
+                f"{by_number[n]['stage']}. {by_number[n]['name']}"
+                f"（{by_number[n].get('description', '')}）"
+                for n in structure.skeleton_parts[part]
+            )
+            prompts[part] = (
+                f"{cls.PART_ROLES[part]}。{structure.label}の次の段に当たる出来事: {stages}"
+            )
+        return prompts
+
     def __init__(self, client: OllamaClient):
         self.client = client
 
@@ -413,6 +445,7 @@ class PlotSkeletonGenerator:
         characters: CharacterSet,
         world: WorldSetting,
         plot_type: Union[PlotTypeSpec, str],
+        structure: Optional[StoryStructure] = None,
     ) -> PlotSkeleton:
         if not isinstance(characters, CharacterSet):
             raise ValueError("characters must be CharacterSet instance")
@@ -436,10 +469,11 @@ class PlotSkeletonGenerator:
         # 読ませると、準備フェーズだけで非常に長時間になる。Ollamaでは
         # 1回の構造化応答にまとめ、他の差し替えクライアントは従来の
         # 呼び出し契約を維持する。
+        part_prompts = self.part_prompts(structure)
         if isinstance(self.client, OllamaClient):
             requirements_text = "\n".join(
                 f"{part}: {requirements}"
-                for part, requirements in self.PART_PROMPTS.items()
+                for part, requirements in part_prompts.items()
             )
             prompt = f"""次の資料を使って、物語プロットのA〜Eパートを一度に生成してください。
 各パートは600文字以内で、指定された要素を具体的かつ簡潔に含めてください。
@@ -465,7 +499,7 @@ class PlotSkeletonGenerator:
             )
             values = {
                 part: str(result.get(part, "")).strip()
-                for part in self.PART_PROMPTS
+                for part in part_prompts
             }
             if not all(values.values()):
                 raise ValueError("Incomplete plot skeleton returned")
@@ -478,7 +512,7 @@ class PlotSkeletonGenerator:
             )
 
         values = {}
-        for part, requirements in self.PART_PROMPTS.items():
+        for part, requirements in part_prompts.items():
             prompt = f"""次の資料を使って、物語プロットの{part}パートを生成してください。
 必ず次の要素を具体的に含めてください: {requirements}
 
