@@ -129,6 +129,9 @@ class StoryStructure:
     name: str
     label: str
     stages: Tuple[Mapping[str, Any], ...]
+    # プロット骨子A〜Eの各部に当たる段の番号。None ならヒーローズ・ジャーニー用の
+    # 既存の骨子要件（PlotSkeletonGenerator.PART_PROMPTS）を使う。
+    skeleton_parts: Optional[Mapping[str, Tuple[int, ...]]] = None
 
     @property
     def stage_count(self) -> int:
@@ -145,13 +148,27 @@ STORY_STRUCTURES = {
         "journey-11", "ヒーローズ・ジャーニー", tuple(JOURNEY_STAGES)
     ),
     "story-circle-8": StoryStructure(
-        "story-circle-8", "ストーリーサークル", tuple(STORY_CIRCLE_8)
+        "story-circle-8", "ストーリーサークル", tuple(STORY_CIRCLE_8),
+        skeleton_parts={
+            "A": (1, 2), "B": (3, 4), "C": (5, 6), "D": (7,), "E": (8,),
+        },
     ),
     "save-the-cat-15": StoryStructure(
-        "save-the-cat-15", "セーブ・ザ・キャット", tuple(SAVE_THE_CAT_15)
+        "save-the-cat-15", "セーブ・ザ・キャット", tuple(SAVE_THE_CAT_15),
+        skeleton_parts={
+            "A": (1, 2, 3, 4, 5, 6),
+            "B": (7, 8, 9),
+            "C": (10, 11, 12),
+            "D": (13, 14),
+            "E": (15,),
+        },
     ),
     "kishotenketsu-4": StoryStructure(
-        "kishotenketsu-4", "起承転結", tuple(KISHOTENKETSU_4)
+        "kishotenketsu-4", "起承転結", tuple(KISHOTENKETSU_4),
+        # 4段を5部に割り当てるため、結はD（出来事の決着）とE（新しい状態）に分ける。
+        skeleton_parts={
+            "A": (1,), "B": (2,), "C": (3,), "D": (4,), "E": (4,),
+        },
     ),
 }
 

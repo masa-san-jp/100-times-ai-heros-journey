@@ -577,3 +577,91 @@ def test_plot_stage_names_follow_structure_even_if_llm_renames_them():
     assert [stage.stage for stage in plot.stages] == list(range(1, 9))
     assert [stage.description for stage in plot.stages[:3]] == ["展開1", "展開2", "展開3"]
     assert plot.stages[3].description == "Searchの展開"
+
+
+class SkeletonRecorder:
+    """骨子生成のプロンプトを記録する（Ollama以外の経路: A〜Eを1回ずつ呼ぶ）。"""
+
+    def __init__(self):
+        self.prompts = []
+
+    def chat(self, prompt, system="", temperature=0.7, model=None):
+        self.prompts.append(prompt)
+        return "骨子"
+
+
+@pytest.mark.parametrize("structure_name", NEW_STRUCTURES)
+def test_skeleton_prompts_follow_chosen_structure(structure_name):
+    from src.plot_generator import get_story_structure
+
+    structure = get_story_structure(structure_name)
+    recorder = SkeletonRecorder()
+    PlotSkeletonGenerator(recorder).generate(
+        _characters(), WorldSetting(text="世界"), "旅", structure=structure
+    )
+
+    assert len(recorder.prompts) == 5
+    by_number = {s["stage"]: s["name"] for s in structure.stages}
+    covered = set()
+    for part, prompt in zip("ABCDE", recorder.prompts):
+        for number in structure.skeleton_parts[part]:
+            assert f"{number}. {by_number[number]}" in prompt
+            covered.add(number)
+        for journey_requirement in PlotSkeletonGenerator.PART_PROMPTS.values():
+            assert journey_requirement not in prompt
+    # どの段も、いずれかの部に割り当てられている
+    assert covered == set(by_number)
+
+
+def test_skeleton_prompts_for_ollama_include_structure_stages():
+    from src.plot_generator import get_story_structure
+
+    class OllamaSkeletonClient(OllamaClient):
+        def __init__(self):
+            self.calls = []
+
+        def chat_json(self, prompt, system="", temperature=0.3, model=None, num_predict=None):
+            self.calls.append(prompt)
+            return {part: f"{part}パート" for part in "ABCDE"}
+
+    structure = get_story_structure("kishotenketsu-4")
+    client = OllamaSkeletonClient()
+    skeleton = PlotSkeletonGenerator(client).generate(
+        _characters(), WorldSetting(text="世界"), "旅", structure=structure
+    )
+
+    assert skeleton.part_e == "Eパート"
+    assert "C: 山場。起承転結の次の段に当たる出来事: 3. 転" in client.calls[0]
+    assert "4. 結" in client.calls[0]
+
+
+@pytest.mark.parametrize("structure_name", ("journey-12", "journey-11"))
+def test_journey_skeleton_prompts_are_unchanged(structure_name):
+    from src.plot_generator import get_story_structure
+
+    without = SkeletonRecorder()
+    PlotSkeletonGenerator(without).generate(_characters(), WorldSetting(text="世界"), "旅")
+    with_structure = SkeletonRecorder()
+    PlotSkeletonGenerator(with_structure).generate(
+        _characters(),
+        WorldSetting(text="世界"),
+        "旅",
+        structure=get_story_structure(structure_name),
+    )
+
+    assert with_structure.prompts == without.prompts
+    assert PlotSkeletonGenerator.PART_PROMPTS["A"] in without.prompts[0]
+
+
+def test_pipeline_passes_structure_to_skeleton(tmp_path):
+    client = FakeClient()
+    ColabParityPipeline(client=client).run(
+        _narrative(),
+        _structure_config(
+            tmp_path, structure="story-circle-8", generate_skeleton=True
+        ),
+    )
+
+    skeleton_prompts = [p for p in client.chat_calls if "物語プロットの" in p]
+    assert len(skeleton_prompts) == 5
+    assert "1. You" in skeleton_prompts[0]
