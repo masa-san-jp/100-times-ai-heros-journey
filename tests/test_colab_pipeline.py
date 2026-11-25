@@ -510,6 +510,11 @@ def test_pipeline_saves_structure_and_resume_reuses_it(tmp_path):
     assert manifest["structure"] == "save-the-cat-15"
     assert manifest["journey_stage_count"] == 15
     assert len(first.stories[0].plot.stages) == 15
+    metadata = json.loads(
+        (first.output_dir / "run_001" / "metadata.json").read_text(encoding="utf-8")
+    )
+    assert metadata["structure"] == "save-the-cat-15"
+    assert metadata["stage_count"] == 15
 
     resumed = ColabParityPipeline(client=FakeClient()).run(
         _narrative(),
@@ -546,3 +551,29 @@ def test_cli_rejects_structure_with_journey_stages(monkeypatch, capsys):
     with pytest.raises(SystemExit):
         run_pipeline.main()
     assert "同時に指定できません" in capsys.readouterr().err
+
+
+def test_plot_stage_names_follow_structure_even_if_llm_renames_them():
+    from src.plot_generator import get_story_structure
+
+    class RenamingClient(FakeClient):
+        def chat_json(self, prompt, system="", temperature=0.3, model=None):
+            self.json_calls.append(prompt)
+            return {
+                "stages": [
+                    {"stage": 10 + i, "name": f"言い換え{i}", "description": f"展開{i}"}
+                    for i in range(1, 4)
+                ]
+            }
+
+    structure = get_story_structure("story-circle-8")
+    plot = PlotGenerator(RenamingClient()).generate(
+        _characters(),
+        stage_definitions=structure.stages,
+        structure_label=structure.label,
+    )
+
+    assert [stage.name for stage in plot.stages] == [s["name"] for s in structure.stages]
+    assert [stage.stage for stage in plot.stages] == list(range(1, 9))
+    assert [stage.description for stage in plot.stages[:3]] == ["展開1", "展開2", "展開3"]
+    assert plot.stages[3].description == "Searchの展開"

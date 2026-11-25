@@ -642,6 +642,7 @@ class StoryGenerator:
         story: Story,
         base_dir: str = "output",
         run_id: Optional[str] = None,
+        structure: Optional[str] = None,
     ) -> Path:
         """
         物語と分析結果を実行ごとのディレクトリに保存
@@ -662,6 +663,7 @@ class StoryGenerator:
             story: 物語
             base_dir: 基底出力ディレクトリ（デフォルト: "output"）
             run_id: 実行名。指定時は同じ秒に複数保存するバッチでも衝突しない。
+            structure: 物語構造の名前。指定時は metadata.json に記録する。
 
         Returns:
             実行ディレクトリのパス（run_YYYYMMDD_HHMMSS 形式）
@@ -680,12 +682,14 @@ class StoryGenerator:
 
         self.save_story(story, output_dir=str(run_dir))
         self.save_analysis(story.narrative_analysis, output_dir=str(run_dir))
-        self._save_auxiliary_outputs(story, run_dir)
+        self._save_auxiliary_outputs(story, run_dir, structure=structure)
         self._cleanup_checkpoint(run_dir)
 
         return run_dir
 
-    def _save_auxiliary_outputs(self, story: Story, run_dir: Path) -> None:
+    def _save_auxiliary_outputs(
+        self, story: Story, run_dir: Path, structure: Optional[str] = None
+    ) -> None:
         """Colab版で生成していた中間・付随成果物を保存する。"""
         if story.world is not None:
             (run_dir / "world.md").write_text(
@@ -721,6 +725,9 @@ class StoryGenerator:
             },
             "selected_elements": dict(story.selected_elements),
         }
+        if structure:
+            metadata["structure"] = structure
+            metadata["stage_count"] = len(story.plot.stages)
         (run_dir / "metadata.json").write_text(
             json.dumps(metadata, ensure_ascii=False, indent=2),
             encoding="utf-8",

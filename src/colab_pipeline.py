@@ -358,6 +358,7 @@ class ColabParityPipeline:
                     story,
                     base_dir=str(output_dir),
                     run_id=f"{next_index:03d}",
+                    structure=structure.name,
                 )
                 existing_ids.add(next_index)
                 next_index += 1

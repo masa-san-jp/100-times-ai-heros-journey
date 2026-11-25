@@ -334,35 +334,19 @@ class PlotGenerator:
         if len(stages_data) == 0:
             raise ValueError("No stages returned")
 
-        stages_data = stages_data[:stage_count]
-
-        # 不足分を選択された段階定義から補完
-        for i in range(len(stages_data), stage_count):
-            stage_def = definitions[i]
-            stages_data.append({
-                "stage": stage_def["stage"],
-                "name": stage_def["name"],
-                "description": f"{stage_def['name']}の展開"
-            })
-
-        # PlotStageオブジェクトのリストに変換
+        # 段の番号・名前・幕は選んだ構造の定義で固定し、LLMからは展開の説明だけを使う。
+        # LLMが段名を言い換えても、プロットは定義どおりの段で並ぶ。
         stages = []
-        for stage_data in stages_data:
-            stage_num = stage_data.get("stage")
-            stage_name = stage_data.get("name")
-            stage_desc = stage_data.get("description", "")
-
-            # 幕の情報を追加
-            act = next(
-                (s["act"] for s in definitions if s["stage"] == stage_num),
-                "不明"
-            )
-
+        for i, stage_def in enumerate(definitions):
+            stage_data = stages_data[i] if i < len(stages_data) else {}
+            if not isinstance(stage_data, Mapping):
+                stage_data = {}
+            stage_desc = str(stage_data.get("description") or "").strip()
             stages.append(PlotStage(
-                stage=stage_num,
-                name=stage_name,
-                act=act,
-                description=stage_desc
+                stage=stage_def["stage"],
+                name=stage_def["name"],
+                act=stage_def["act"],
+                description=stage_desc or f"{stage_def['name']}の展開",
             ))
 
         return stages

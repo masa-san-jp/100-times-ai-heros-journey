@@ -389,7 +389,8 @@ output/
 
 生成途中または失敗時には、`run_001/` に `draft.json`、`chapter_01.md`、
 `chapter_progress.json` が追加されます。これらは再開に使われ、完成後は最終成果物へ整理されます。
-`batch_manifest.json` には完了数、試行数、重複破棄数、設定、エラー内容が記録されます。
+`batch_manifest.json` には完了数、試行数、重複破棄数、設定（物語構造`structure`を含む）、エラー内容が記録されます。
+各runの`metadata.json`にも、使った物語構造`structure`と段数`stage_count`が記録されます。
 
 `output/` と `data/` は `.gitignore` で除外されています。共有用の完成作例は [examples/README.md](examples/README.md) を参照してください。
 
