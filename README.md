@@ -349,6 +349,7 @@ python run_pipeline.py --structure story-circle-8 --loops 1 --pool-size 3 --no-c
   - https://www.studiobinder.com/blog/save-the-cat-beat-sheet/
   - https://en.wikipedia.org/wiki/Story_structure
 - 各段の幕（第一幕〜第三幕）は、セーブ・ザ・キャットの13〜15が第三幕であること以外は暫定です。
+- 各段の役割の説明文（プロンプトに入る日本語の文）も暫定です。一般的な解説に沿って書いたもので、出典との照合はしていません。一次資料の確認後に、段の名前と一緒に見直します。
 - 選んだ構造は`batch_manifest.json`の`structure`に保存され、`--resume`ではその構造を使います。別の構造を指定して再開するとエラーになります。
 - 章数が段数より多い場合（例: 起承転結で10章）は、段数と同じ章数になります。
 - プロット骨子A〜E（`--no-skeleton`で省略可）はヒーローズ・ジャーニーを前提にした現行のままです。
