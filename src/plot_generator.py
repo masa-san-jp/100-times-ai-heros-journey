@@ -3,6 +3,7 @@
 
 Colab版のヒーローズ・ジャーニー12段階に基づいたプロット生成。
 旧11段階版は ``stage_definitions=JOURNEY_STAGES`` で明示的に選択できる。
+ほかの物語構造は ``STORY_STRUCTURES`` から ``get_story_structure`` で選ぶ。
 """
 
 import logging
@@ -45,6 +46,133 @@ JOURNEY_STAGES_12 = [
     {"stage": 11, "name": "復活", "act": "第三幕"},
     {"stage": 12, "name": "宝を持ち帰る", "act": "第三幕"},
 ]
+
+
+# 以下の構造の段名は二次資料（Wikipedia と解説記事、確認日2026-11-25）による。
+# 一次資料の確認は arayashiki-kb のイシュー #39 で進めている。
+# "description" はプロンプトに入れる各段の役割。一般的な解説に沿って書いた暫定の文で、
+# 出典との照合はしていない。一次資料の確認後に段名と一緒に見直す。
+
+# ダン・ハーモンのストーリーサークル（8段）。
+# 幕の割り当ては暫定（出典で確認できていない）。
+STORY_CIRCLE_8 = [
+    {"stage": 1, "name": "You", "act": "第一幕",
+     "description": "主人公が居心地のよい日常にいる"},
+    {"stage": 2, "name": "Need", "act": "第一幕",
+     "description": "主人公が何かを欲する、または欠けたものに気づく"},
+    {"stage": 3, "name": "Go", "act": "第二幕",
+     "description": "主人公が見知らぬ状況へ踏み出す"},
+    {"stage": 4, "name": "Search", "act": "第二幕",
+     "description": "新しい状況に適応しようともがき、試される"},
+    {"stage": 5, "name": "Find", "act": "第二幕",
+     "description": "求めていたものを見つける"},
+    {"stage": 6, "name": "Take", "act": "第二幕",
+     "description": "手に入れた代わりに重い代償を払う"},
+    {"stage": 7, "name": "Return", "act": "第三幕",
+     "description": "元の日常へ戻る"},
+    {"stage": 8, "name": "Change", "act": "第三幕",
+     "description": "変化した主人公として日常に向き合う"},
+]
+
+# ブレイク・スナイダーのセーブ・ザ・キャット（15段）。
+# 13〜15が第三幕であることだけ確認済み。1〜6と7〜12の幕は暫定。
+SAVE_THE_CAT_15 = [
+    {"stage": 1, "name": "Opening Image", "act": "第一幕",
+     "description": "変化する前の主人公と世界を一場面で見せる"},
+    {"stage": 2, "name": "Theme Stated", "act": "第一幕",
+     "description": "誰かが物語のテーマをそれとなく口にする"},
+    {"stage": 3, "name": "Set-Up", "act": "第一幕",
+     "description": "主人公の日常、欠点、周囲の人物を示す"},
+    {"stage": 4, "name": "Catalyst", "act": "第一幕",
+     "description": "日常を壊す出来事が起きる"},
+    {"stage": 5, "name": "Debate", "act": "第一幕",
+     "description": "主人公が進むべきか迷い、ためらう"},
+    {"stage": 6, "name": "Break into Two", "act": "第一幕",
+     "description": "主人公が自ら決断し、新しい世界へ入る"},
+    {"stage": 7, "name": "B Story", "act": "第二幕",
+     "description": "テーマを映す別の人間関係が始まる"},
+    {"stage": 8, "name": "Fun and Games", "act": "第二幕",
+     "description": "新しい世界での冒険や試みを描く"},
+    {"stage": 9, "name": "Midpoint", "act": "第二幕",
+     "description": "偽りの勝利か偽りの敗北で、賭け金が上がる"},
+    {"stage": 10, "name": "Bad Guys Close In", "act": "第二幕",
+     "description": "外の敵と内の弱さが主人公を追い詰める"},
+    {"stage": 11, "name": "All Is Lost", "act": "第二幕",
+     "description": "主人公がすべてを失ったように見える"},
+    {"stage": 12, "name": "Dark Night of the Soul", "act": "第二幕",
+     "description": "絶望の中で主人公が自分と向き合う"},
+    {"stage": 13, "name": "Break into Three", "act": "第三幕",
+     "description": "テーマに気づき、解決の糸口をつかむ"},
+    {"stage": 14, "name": "Finale", "act": "第三幕",
+     "description": "学んだことを使って問題を解決する"},
+    {"stage": 15, "name": "Final Image", "act": "第三幕",
+     "description": "変化した主人公と世界を、最初の場面と対にして見せる"},
+]
+
+# 起承転結（4段）。幕の割り当ては暫定（出典で確認できていない）。
+KISHOTENKETSU_4 = [
+    {"stage": 1, "name": "起", "act": "第一幕",
+     "description": "導入。人物と状況を示す"},
+    {"stage": 2, "name": "承", "act": "第二幕",
+     "description": "展開。起で示したことを深める"},
+    {"stage": 3, "name": "転", "act": "第二幕",
+     "description": "転換・ひねり。予想しない出来事で見え方が変わる"},
+    {"stage": 4, "name": "結", "act": "第三幕",
+     "description": "結果。転を受けて全体をまとめる"},
+]
+
+
+@dataclass(frozen=True)
+class StoryStructure:
+    """選択できる物語構造。"""
+
+    name: str
+    label: str
+    stages: Tuple[Mapping[str, Any], ...]
+
+    @property
+    def stage_count(self) -> int:
+        return len(self.stages)
+
+
+DEFAULT_STRUCTURE = "journey-12"
+
+STORY_STRUCTURES = {
+    "journey-12": StoryStructure(
+        "journey-12", "ヒーローズ・ジャーニー", tuple(JOURNEY_STAGES_12)
+    ),
+    "journey-11": StoryStructure(
+        "journey-11", "ヒーローズ・ジャーニー", tuple(JOURNEY_STAGES)
+    ),
+    "story-circle-8": StoryStructure(
+        "story-circle-8", "ストーリーサークル", tuple(STORY_CIRCLE_8)
+    ),
+    "save-the-cat-15": StoryStructure(
+        "save-the-cat-15", "セーブ・ザ・キャット", tuple(SAVE_THE_CAT_15)
+    ),
+    "kishotenketsu-4": StoryStructure(
+        "kishotenketsu-4", "起承転結", tuple(KISHOTENKETSU_4)
+    ),
+}
+
+
+def get_story_structure(name: str) -> StoryStructure:
+    """名前から物語構造を返す。未知の名前は ValueError。"""
+    try:
+        return STORY_STRUCTURES[name]
+    except KeyError:
+        choices = ", ".join(STORY_STRUCTURES)
+        raise ValueError(f"unknown structure: {name} (choices: {choices})") from None
+
+
+def _stages_prompt_text(definitions: Sequence[Mapping[str, Any]]) -> str:
+    lines = []
+    for s in definitions:
+        line = f"{s['stage']}. {s['name']} ({s['act']})"
+        if s.get("description"):
+            line += f": {s['description']}"
+        lines.append(line)
+    return "\n".join(lines)
 
 
 @dataclass(frozen=True)
@@ -98,6 +226,7 @@ class PlotGenerator:
         world: Optional[Any] = None,
         skeleton: Optional[Any] = None,
         stage_definitions: Optional[Sequence[Mapping[str, Any]]] = None,
+        structure_label: Optional[str] = None,
     ) -> Plot:
         """
         プロットを生成
@@ -107,7 +236,8 @@ class PlotGenerator:
             plot_type: 物語の構造タイプ
             world: 物語世界（文字列またはto_text()を持つオブジェクト）
             skeleton: プロット骨子（文字列またはto_text()を持つオブジェクト）
-            stage_definitions: 使用するヒーローズ・ジャーニー段階の定義
+            stage_definitions: 使用する物語構造の段階定義（既定は12段階）
+            structure_label: プロンプトに書く構造名（既定は「ヒーローズ・ジャーニー」）
 
         Returns:
             プロット
@@ -127,6 +257,7 @@ class PlotGenerator:
             world=world,
             skeleton=skeleton,
             stage_definitions=stage_definitions,
+            structure_label=structure_label,
         )
 
         # 統合アウトラインを生成
@@ -137,6 +268,7 @@ class PlotGenerator:
             world=world,
             skeleton=skeleton,
             stage_definitions=stage_definitions,
+            structure_label=structure_label,
         )
 
         return Plot(stages=tuple(stages), outline=outline)
@@ -148,6 +280,7 @@ class PlotGenerator:
         world: Optional[Any] = None,
         skeleton: Optional[Any] = None,
         stage_definitions: Optional[Sequence[Mapping[str, Any]]] = None,
+        structure_label: Optional[str] = None,
     ) -> List[PlotStage]:
         """プロット構造を生成"""
         characters_desc = characters.to_text()
@@ -155,13 +288,11 @@ class PlotGenerator:
         skeleton_desc = self._context_text(skeleton)
         definitions = list(stage_definitions or JOURNEY_STAGES_12)
         stage_count = len(definitions)
+        label = structure_label or "ヒーローズ・ジャーニー"
+        stages_desc = _stages_prompt_text(definitions)
+        first, second = definitions[0]["name"], definitions[min(1, stage_count - 1)]["name"]
 
-        stages_desc = "\n".join([
-            f"{s['stage']}. {s['name']} ({s['act']})"
-            for s in definitions
-        ])
-
-        prompt = f"""以下のキャラクターと物語資料、ヒーローズ・ジャーニー{stage_count}段階に基づいて、
+        prompt = f"""以下のキャラクターと物語資料、{label}{stage_count}段階に基づいて、
 各段階の簡潔な展開（各50文字程度）を考えてJSON形式で出力してください。
 
 【キャラクター】
@@ -176,14 +307,14 @@ class PlotGenerator:
 【プロット骨子】
 {skeleton_desc or '指定なし'}
 
-【ヒーローズ・ジャーニー{stage_count}段階】
+【{label}{stage_count}段階】
 {stages_desc}
 
 出力形式:
 {{
   "stages": [
-    {{"stage": 1, "name": "日常世界", "description": "..."}},
-    {{"stage": 2, "name": "冒険への呼びかけ", "description": "..."}},
+    {{"stage": 1, "name": "{first}", "description": "..."}},
+    {{"stage": 2, "name": "{second}", "description": "..."}},
     ...
   ]
 }}"""
@@ -204,35 +335,19 @@ class PlotGenerator:
         if len(stages_data) == 0:
             raise ValueError("No stages returned")
 
-        stages_data = stages_data[:stage_count]
-
-        # 不足分を選択された段階定義から補完
-        for i in range(len(stages_data), stage_count):
-            stage_def = definitions[i]
-            stages_data.append({
-                "stage": stage_def["stage"],
-                "name": stage_def["name"],
-                "description": f"{stage_def['name']}の展開"
-            })
-
-        # PlotStageオブジェクトのリストに変換
+        # 段の番号・名前・幕は選んだ構造の定義で固定し、LLMからは展開の説明だけを使う。
+        # LLMが段名を言い換えても、プロットは定義どおりの段で並ぶ。
         stages = []
-        for stage_data in stages_data:
-            stage_num = stage_data.get("stage")
-            stage_name = stage_data.get("name")
-            stage_desc = stage_data.get("description", "")
-
-            # 幕の情報を追加
-            act = next(
-                (s["act"] for s in definitions if s["stage"] == stage_num),
-                "不明"
-            )
-
+        for i, stage_def in enumerate(definitions):
+            stage_data = stages_data[i] if i < len(stages_data) else {}
+            if not isinstance(stage_data, Mapping):
+                stage_data = {}
+            stage_desc = str(stage_data.get("description") or "").strip()
             stages.append(PlotStage(
-                stage=stage_num,
-                name=stage_name,
-                act=act,
-                description=stage_desc
+                stage=stage_def["stage"],
+                name=stage_def["name"],
+                act=stage_def["act"],
+                description=stage_desc or f"{stage_def['name']}の展開",
             ))
 
         return stages
@@ -244,6 +359,7 @@ class PlotGenerator:
         world: Optional[Any] = None,
         skeleton: Optional[Any] = None,
         stage_definitions: Optional[Sequence[Mapping[str, Any]]] = None,
+        structure_label: Optional[str] = None,
     ) -> str:
         """統合アウトラインを生成"""
         characters_desc = characters.to_text()
@@ -251,11 +367,13 @@ class PlotGenerator:
         skeleton_desc = self._context_text(skeleton)
         definitions = list(stage_definitions or JOURNEY_STAGES_12)
         stage_count = len(definitions)
-        stages_desc = "\n".join(
-            f"{s['stage']}. {s['name']} ({s['act']})" for s in definitions
+        label = structure_label or "ヒーローズ・ジャーニー"
+        stages_desc = _stages_prompt_text(definitions)
+        flow = "→".join(
+            [definitions[0]["name"], definitions[min(1, stage_count - 1)]["name"], "...", definitions[-1]["name"]]
         )
 
-        prompt = f"""以下のキャラクターと物語資料を使って、ヒーローズ・ジャーニー{stage_count}段階の構造に沿った
+        prompt = f"""以下のキャラクターと物語資料を使って、{label}{stage_count}段階の構造に沿った
 物語のプロットアウトラインを800文字程度で作成してください。
 
 【キャラクター】
@@ -270,11 +388,11 @@ class PlotGenerator:
 【プロット骨子】
 {skeleton_desc or '指定なし'}
 
-【ヒーローズ・ジャーニーの段階】
+【{label}の段階】
 {stages_desc}
 
 【要件】
-- 上記の全段階（日常世界→冒険への呼びかけ→...→宝を持ち帰る）に沿うこと
+- 上記の全段階（{flow}）に沿うこと
 - 主人公の成長と変化を明確に描くこと
 - 第一幕・第二幕・第三幕の構成を意識すること"""
 

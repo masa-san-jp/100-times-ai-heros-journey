@@ -14,6 +14,7 @@ from src.llm_factory import (
     create_provider_client,
     resolve_ollama_model,
 )
+from src.plot_generator import DEFAULT_STRUCTURE, STORY_STRUCTURES
 
 SAMPLE = {
     "author": "未知を学び、本質を考え、空想することが好き。",
@@ -69,8 +70,10 @@ def main() -> int:
                         help="既存のbatchディレクトリを指定して続きから再開")
     parser.add_argument("--seed", type=int, default=None, help="ランダム選択の再現用シード")
     parser.add_argument("--plot-type", default=None, help="全パターンで固定するプロット形式")
-    parser.add_argument("--journey-stages", type=int, choices=(11, 12), default=12,
-                        help="ヒーローズ・ジャーニーの段階数")
+    parser.add_argument("--structure", default=None, choices=tuple(STORY_STRUCTURES),
+                        help=f"物語構造（既定値: {DEFAULT_STRUCTURE}）")
+    parser.add_argument("--journey-stages", type=int, choices=(11, 12), default=None,
+                        help="ヒーローズ・ジャーニーの段階数（互換用。--structureと同時指定不可）")
     parser.add_argument("--chapter-count", type=int, default=10,
                         help="執筆する章数（既定値: 10）")
     parser.add_argument(
@@ -88,6 +91,12 @@ def main() -> int:
     parser.add_argument("--max-attempts", type=int, default=None,
                         help="重複時を含む最大生成試行回数")
     args = parser.parse_args()
+
+    if args.structure and args.journey_stages:
+        parser.error("--structureと--journey-stagesは同時に指定できません")
+    structure = args.structure or (
+        f"journey-{args.journey_stages}" if args.journey_stages else None
+    )
 
     if args.list_models and args.provider != "ollama":
         parser.error("--list-modelsは--provider ollamaでのみ使用できます")
@@ -157,7 +166,7 @@ def main() -> int:
         generate_world=not args.no_world,
         generate_skeleton=not args.no_skeleton,
         generate_visual_prompts=not args.no_visual_prompts,
-        journey_stage_count=args.journey_stages,
+        structure=structure,
         chapter_count=args.chapter_count,
         max_chapter_continuations=args.max_chapter_continuations,
         output_dir=args.output_dir,

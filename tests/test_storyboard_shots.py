@@ -463,3 +463,55 @@ def test_old_shot_plan_prompt_keeps_legacy_behaviour(monkeypatch):
     )
     assert "The protagonist: Dark hair. Wears a dark coat." in prompt
     assert "tiny distant figure" not in prompt
+
+
+NEW_STRUCTURES = ("kishotenketsu-4", "story-circle-8", "save-the-cat-15")
+
+
+def test_shot_plan_has_4_8_15_stage_mappings():
+    stage_plans = json.loads(storyboard.SHOT_PLAN_PATH.read_text(encoding="utf-8"))[
+        "stage_plans"
+    ]
+    long_sizes = {"extreme_long", "long", "full"}
+    for key in ("4", "8", "15"):
+        plan = stage_plans[key]
+        assert len(plan) == int(key)
+        assert _stage_plan(int(key)) == plan
+        assert plan[0] in ("extreme_long", "long")
+        assert plan[-1] in ("extreme_long", "long")
+        assert sum(size in long_sizes for size in plan) / len(plan) >= 0.5
+        assert sum(size == "close_up" for size in plan) / len(plan) <= 0.3
+    # 感情が最も動く段（転・Take・All Is Lost）は close_up
+    assert stage_plans["4"][2] == "close_up"
+    assert stage_plans["8"][5] == "close_up"
+    assert stage_plans["15"][10] == "close_up"
+
+
+@pytest.mark.parametrize("structure_name", NEW_STRUCTURES)
+def test_storyboard_reads_plot_of_each_structure(tmp_path, structure_name):
+    from src.plot_generator import Plot, PlotStage, get_story_structure
+
+    structure = get_story_structure(structure_name)
+    plot = Plot(
+        stages=tuple(
+            PlotStage(s["stage"], s["name"], s["act"], f"{s['name']}の展開。")
+            for s in structure.stages
+        ),
+        outline="アウトライン",
+    )
+    run = _write_run(tmp_path, chapters=False)
+    (run / "story.md").write_text(
+        f"# テスト作品\n\n## プロット\n\n{plot.to_text()}\n", encoding="utf-8"
+    )
+
+    parsed = _parse_plot((run / "story.md").read_text(encoding="utf-8"))
+    assert [stage.name for stage in parsed] == [s["name"] for s in structure.stages]
+
+    result = build_shot_list(run, FakeClient(), unit="stage")
+    assert result.unit == "stage"
+    assert [shot["stage"] for shot in result.shots] == list(
+        range(1, structure.stage_count + 1)
+    )
+    assert [shot["shot_size"] for shot in result.shots] == _stage_plan(
+        structure.stage_count
+    )

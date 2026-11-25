@@ -41,6 +41,22 @@
     }
   },
   "stage_plans": {
+    "4": [
+      "long",
+      "full",
+      "close_up",
+      "extreme_long"
+    ],
+    "8": [
+      "extreme_long",
+      "close_up",
+      "long",
+      "medium",
+      "full",
+      "close_up",
+      "long",
+      "extreme_long"
+    ],
     "11": [
       "extreme_long",
       "long",
@@ -66,6 +82,23 @@
       "full",
       "long",
       "close_up",
+      "extreme_long"
+    ],
+    "15": [
+      "extreme_long",
+      "medium",
+      "full",
+      "close_up",
+      "medium",
+      "long",
+      "medium",
+      "full",
+      "extreme_long",
+      "long",
+      "close_up",
+      "close_up",
+      "full",
+      "long",
       "extreme_long"
     ]
   }
