@@ -30,7 +30,14 @@ from .colab_features import (
 )
 from .narrative_analyzer import NarrativeAnalysis, NarrativeAnalyzer, NarrativeInput
 from .ollama_client import OllamaClient, OllamaConfig
-from .plot_generator import STORY_STRUCTURES, StoryStructure, get_story_structure
+from .plot_generator import (
+    EMOTIONAL_ARCS,
+    STORY_STRUCTURES,
+    StoryStructure,
+    apply_emotional_arc,
+    get_emotional_arc,
+    get_story_structure,
+)
 from .sheet_storage import append_row_by_columns, append_story
 from .story_generator import (
     ChapterGenerationError,
@@ -55,6 +62,8 @@ class PipelineConfig:
     journey_stage_count: int = 12
     # 物語構造の名前（STORY_STRUCTURES のキー）。None なら journey_stage_count から決める。
     structure: Optional[str] = None
+    # 感情曲線の形（EMOTIONAL_ARCS のキー、#61）。None なら段に感情の向きを付けない。
+    emotional_arc: Optional[str] = None
     chapter_count: Optional[int] = 10
     max_chapter_continuations: int = 2
     output_dir: str = "output"
@@ -80,6 +89,10 @@ class PipelineConfig:
                 )
             if self.journey_stage_count != 12:
                 raise ValueError("structure and journey_stage_count cannot be used together")
+        if self.emotional_arc is not None and self.emotional_arc not in EMOTIONAL_ARCS:
+            raise ValueError(
+                f"emotional_arc must be one of: {', '.join(EMOTIONAL_ARCS)}"
+            )
         if self.chapter_count is not None:
             if not isinstance(self.chapter_count, int) or self.chapter_count < 1:
                 raise ValueError("chapter_count must be a positive integer")
@@ -191,6 +204,7 @@ class ColabParityPipeline:
         if resumed and output_dir is not None:
             self._validate_resume_narrative(output_dir, narrative)
             config = self._resume_structure(output_dir, config)
+            config = self._resume_emotional_arc(output_dir, config)
             preparation = self._load_preparation(output_dir)
 
         if preparation is not None:
@@ -253,8 +267,11 @@ class ColabParityPipeline:
 
         stories = []
         structure = config.story_structure
-        stage_definitions = structure.stages
+        arc = get_emotional_arc(config.emotional_arc) if config.emotional_arc else None
+        stage_definitions = apply_emotional_arc(structure.stages, arc)
         logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
+        if arc is not None:
+            logger.info("感情曲線: %s（%s）", arc.name, "→".join(arc.directions))
         while completed_count < config.variation_count and attempts < max_attempts:
             attempts += 1
             logger.info(
@@ -660,6 +677,29 @@ class ColabParityPipeline:
         return config
 
     @staticmethod
+    def _resume_emotional_arc(output_dir: Path, config: PipelineConfig) -> PipelineConfig:
+        """再開時は、元のバッチと同じ感情曲線を使う。"""
+        try:
+            manifest = json.loads(
+                (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError):
+            return config
+        saved = manifest.get("emotional_arc") if isinstance(manifest, dict) else None
+        if not saved:
+            return config
+        if saved not in EMOTIONAL_ARCS:
+            raise ValueError(f"batch_manifest.json has unknown emotional_arc: {saved}")
+        if config.emotional_arc is None:
+            return replace(config, emotional_arc=saved)
+        if config.emotional_arc != saved:
+            raise ValueError(
+                f"resume emotional_arc {config.emotional_arc} does not match "
+                f"the original batch ({saved})"
+            )
+        return config
+
+    @staticmethod
     def _save_batch_manifest(
         output_dir: Path,
         config: PipelineConfig,
@@ -686,6 +726,7 @@ class ColabParityPipeline:
             "structure": config.structure_name,
             # ストーリーボードは段数をこのキーから読むため、選んだ構造の段数を書く。
             "journey_stage_count": config.story_structure.stage_count,
+            "emotional_arc": config.emotional_arc,
             "chapter_count": config.chapter_count,
             "max_chapter_continuations": config.max_chapter_continuations,
             "random_seed": config.random_seed,

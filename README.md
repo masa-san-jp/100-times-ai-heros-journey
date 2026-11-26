@@ -282,6 +282,7 @@ storyboard/
 | `--pool-size N` | `100` | 願望・能力・課題の候補数 |
 | `--structure NAME` | `journey-12` | 物語構造。`journey-12` / `journey-11` / `story-circle-8` / `save-the-cat-15` / `kishotenketsu-4`（[生成される工程](#生成される工程)を参照） |
 | `--journey-stages 11\|12` | `12` | ヒーローズ・ジャーニーの段階数（互換用。`--structure journey-11` と同じ。`--structure`と同時には指定できません） |
+| `--emotional-arc NAME` | なし | 段ごとの感情の上下を決める形。`rags-to-riches` / `tragedy` / `man-in-a-hole` / `icarus` / `cinderella` / `oedipus`（[感情曲線を指定する](#感情曲線を指定する)を参照） |
 | `--chapter-count N` | `10` | 1作品の章数 |
 | `--resume DIR` | なし | 既存バッチを途中再開 |
 | `--batch-id NAME` | 自動生成 | `output/batch_NAME` として保存 |
@@ -382,6 +383,28 @@ python run_pipeline.py --structure story-circle-8 --loops 1 --pool-size 3 --no-c
 - ストーリーボードのショットサイズは、4・8・15段それぞれに並びを用意しています（`config/storyboard/shot_plan.json`）。
 
 自動評価やランキング機能は現在実装していません。
+
+### 感情曲線を指定する
+
+`--emotional-arc NAME`で、プロットの各段に感情の上下（上昇・下降）を付けられます。指定しなければ、これまでと同じプロンプトで生成します。
+
+| 名前 | 形 | 感情の上下 |
+|---|---|---|
+| `rags-to-riches` | 貧から富へ | 上昇 |
+| `tragedy` | 悲劇 | 下降 |
+| `man-in-a-hole` | 穴に落ちた男 | 下降→上昇 |
+| `icarus` | イカロス | 上昇→下降 |
+| `cinderella` | シンデレラ | 上昇→下降→上昇 |
+| `oedipus` | オイディプス | 下降→上昇→下降 |
+
+```bash
+python run_pipeline.py --structure journey-12 --emotional-arc man-in-a-hole --loops 1 --pool-size 3 --no-chapters
+```
+
+- 形の上下の並びを、選んだ構造の段数に前から等分して割り振ります（例: `journey-12`と`man-in-a-hole`は1〜6段が下降、7〜12段が上昇）。
+- 各段の上下は、プロット生成のプロンプトの段の一覧に`［感情: 上昇］`の形で入ります。プロット本文の「N. 名前 (第X幕)」の形式は変わりません。
+- 6つの形の出典は、Reagan ほか「The emotional arcs of stories are dominated by six basic shapes」（EPJ Data Science 5:31、2016）。Project Gutenberg の英語の小説1,327冊の語の感情価から得られた基本形です。知識ベースの[arayashiki-culture cul-0024](https://github.com/masa-san-jp/arayashiki-culture/blob/main/entries/reagan-2016-emotional-arcs-of-stories.md)にまとめてあります。ヴォネガットが講演で語った形とは数も名前も同じではありません。
+- 選んだ形は`batch_manifest.json`の`emotional_arc`に保存され、`--resume`ではその形を使います。別の形を指定して再開するとエラーになります。
 
 ## 出力構成
 

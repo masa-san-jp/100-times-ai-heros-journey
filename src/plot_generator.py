@@ -182,12 +182,93 @@ def get_story_structure(name: str) -> StoryStructure:
         raise ValueError(f"unknown structure: {name} (choices: {choices})") from None
 
 
+EMOTION_RISE = "上昇"
+EMOTION_FALL = "下降"
+
+
+@dataclass(frozen=True)
+class EmotionalArc:
+    """物語の感情の起伏の形（#61）。"""
+
+    name: str
+    label: str
+    # 形を前から順に区切ったときの、各区間の感情の向き（上昇・下降）。
+    directions: Tuple[str, ...]
+
+
+# 出典: Reagan AJ ほか "The emotional arcs of stories are dominated by six basic
+# shapes", EPJ Data Science 5:31 (2016)。arayashiki-culture の cul-0024。
+# Project Gutenberg の小説 1,327 冊の語の感情価（快・不快）から得られた6つの基本形。
+EMOTIONAL_ARCS = {
+    arc.name: arc
+    for arc in (
+        EmotionalArc("rags-to-riches", "貧から富へ", (EMOTION_RISE,)),
+        EmotionalArc("tragedy", "悲劇", (EMOTION_FALL,)),
+        EmotionalArc("man-in-a-hole", "穴に落ちた男", (EMOTION_FALL, EMOTION_RISE)),
+        EmotionalArc("icarus", "イカロス", (EMOTION_RISE, EMOTION_FALL)),
+        EmotionalArc(
+            "cinderella", "シンデレラ", (EMOTION_RISE, EMOTION_FALL, EMOTION_RISE)
+        ),
+        EmotionalArc("oedipus", "オイディプス", (EMOTION_FALL, EMOTION_RISE, EMOTION_FALL)),
+    )
+}
+
+
+def get_emotional_arc(name: str) -> EmotionalArc:
+    """名前から感情曲線の形を返す。未知の名前は ValueError。"""
+    try:
+        return EMOTIONAL_ARCS[name]
+    except KeyError:
+        choices = ", ".join(EMOTIONAL_ARCS)
+        raise ValueError(f"unknown emotional arc: {name} (choices: {choices})") from None
+
+
+def emotion_directions(arc: EmotionalArc, stage_count: int) -> Tuple[str, ...]:
+    """形の区間を段数に割り振り、段ごとの感情の向きを返す。
+
+    段を前から区間の数に等分し、各段にその区間の向きを付ける
+    （例: 12段の「穴に落ちた男」は1〜6段が下降、7〜12段が上昇）。
+    """
+    if stage_count < 1:
+        raise ValueError("stage_count must be a positive integer")
+    segments = len(arc.directions)
+    return tuple(
+        arc.directions[min(segments - 1, index * segments // stage_count)]
+        for index in range(stage_count)
+    )
+
+
+def apply_emotional_arc(
+    definitions: Sequence[Mapping[str, Any]], arc: Optional[EmotionalArc]
+) -> Tuple[Mapping[str, Any], ...]:
+    """段の定義に、感情の向き（``emotion``）を足した写しを返す。arc が None なら元のまま。"""
+    if arc is None:
+        return tuple(definitions)
+    directions = emotion_directions(arc, len(definitions))
+    return tuple(
+        {**definition, "emotion": direction}
+        for definition, direction in zip(definitions, directions)
+    )
+
+
+def _has_emotion(definitions: Sequence[Mapping[str, Any]]) -> bool:
+    return any(definition.get("emotion") for definition in definitions)
+
+
+EMOTION_REQUIREMENT = (
+    "各段の［感情］に従うこと（上昇＝主人公の感情・境遇が良い方へ動く、"
+    "下降＝悪い方へ動く）"
+)
+
+
 def _stages_prompt_text(definitions: Sequence[Mapping[str, Any]]) -> str:
     lines = []
     for s in definitions:
         line = f"{s['stage']}. {s['name']} ({s['act']})"
         if s.get("description"):
             line += f": {s['description']}"
+        if s.get("emotion"):
+            line += f" ［感情: {s['emotion']}］"
         lines.append(line)
     return "\n".join(lines)
 
@@ -308,6 +389,7 @@ class PlotGenerator:
         label = structure_label or "ヒーローズ・ジャーニー"
         stages_desc = _stages_prompt_text(definitions)
         first, second = definitions[0]["name"], definitions[min(1, stage_count - 1)]["name"]
+        emotion_note = f"\n【要件】\n- {EMOTION_REQUIREMENT}\n" if _has_emotion(definitions) else ""
 
         prompt = f"""以下のキャラクターと物語資料、{label}{stage_count}段階に基づいて、
 各段階の簡潔な展開（各50文字程度）を考えてJSON形式で出力してください。
@@ -326,7 +408,7 @@ class PlotGenerator:
 
 【{label}{stage_count}段階】
 {stages_desc}
-
+{emotion_note}
 出力形式:
 {{
   "stages": [
@@ -386,6 +468,7 @@ class PlotGenerator:
         stage_count = len(definitions)
         label = structure_label or "ヒーローズ・ジャーニー"
         stages_desc = _stages_prompt_text(definitions)
+        emotion_note = f"\n- {EMOTION_REQUIREMENT}" if _has_emotion(definitions) else ""
         flow = "→".join(
             [definitions[0]["name"], definitions[min(1, stage_count - 1)]["name"], "...", definitions[-1]["name"]]
         )
@@ -411,7 +494,7 @@ class PlotGenerator:
 【要件】
 - 上記の全段階（{flow}）に沿うこと
 - 主人公の成長と変化を明確に描くこと
-- 第一幕・第二幕・第三幕の構成を意識すること"""
+- 第一幕・第二幕・第三幕の構成を意識すること{emotion_note}"""
 
         try:
             return self.client.chat(
