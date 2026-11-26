@@ -17,6 +17,7 @@ from typing import Any, Callable, Dict, Optional, Set, Tuple
 
 from .character_generator import CharacterGenerator
 from .colab_features import (
+    DEFAULT_PLOT_TYPES,
     ElementPoolGenerator,
     ElementPools,
     PlotSkeleton,
@@ -28,6 +29,7 @@ from .colab_features import (
     WorldGenerator,
     WorldSetting,
 )
+from .dramatic_situations import DramaticSituation, situation_table
 from .narrative_analyzer import NarrativeAnalysis, NarrativeAnalyzer, NarrativeInput
 from .ollama_client import OllamaClient, OllamaConfig
 from .plot_generator import (
@@ -66,6 +68,9 @@ class PipelineConfig:
     # 感情曲線の形（EMOTIONAL_ARCS のキー、#61）。None なら作品ごとに6つの形から
     # 自動で選ぶ。指定すると全作品をその形に固定する。
     emotional_arc: Optional[str] = None
+    # ポルティの劇的状況の番号（1〜36、#60）。None なら作品ごとに、選んだプロット形式の
+    # 除外表に載っていない状況から自動で選ぶ。指定すると全作品をその状況に固定する。
+    dramatic_situation: Optional[int] = None
     chapter_count: Optional[int] = 10
     max_chapter_continuations: int = 2
     output_dir: str = "output"
@@ -107,6 +112,21 @@ class PipelineConfig:
             )
         if self.fixed_plot_type is not None and not self.fixed_plot_type.strip():
             raise ValueError("fixed_plot_type must not be empty")
+        # 劇的状況の除外表は形式名で引くため、固定する形式も21個のどれかに限る（#60）。
+        if self.fixed_plot_type is not None and self.fixed_plot_type not in DEFAULT_PLOT_TYPES:
+            raise ValueError(
+                f"fixed_plot_type must be one of: {', '.join(DEFAULT_PLOT_TYPES)}"
+            )
+        if self.dramatic_situation is not None:
+            table = situation_table()
+            table.get(self.dramatic_situation)
+            if self.fixed_plot_type is not None and table.conflicts(
+                self.fixed_plot_type, self.dramatic_situation
+            ):
+                raise ValueError(
+                    f"dramatic_situation {self.dramatic_situation} is excluded for "
+                    f"plot type {self.fixed_plot_type}"
+                )
         if self.batch_id is not None and not self.batch_id.strip():
             raise ValueError("batch_id must not be empty")
         if self.batch_id and self.resume_dir:
@@ -207,6 +227,7 @@ class ColabParityPipeline:
             self._validate_resume_narrative(output_dir, narrative)
             config = self._resume_structure(output_dir, config)
             config = self._resume_emotional_arc(output_dir, config)
+            config = self._resume_dramatic_situation(output_dir, config)
             preparation = self._load_preparation(output_dir)
 
         if preparation is not None:
@@ -268,12 +289,19 @@ class ColabParityPipeline:
             )
 
         stories = []
+        # 21個に無い名前の形式は除外表を引けないので、選ぶ前に除く。候補が残らなければ
+        # 生成を始める前に止める（#60）。
+        plot_candidates = self._plot_type_candidates(plot_types, config)
         structure = config.story_structure
         logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
         # 感情曲線は要素選択とは別の乱数で選ぶ。同じシードなら、プロット形式と要素の
         # 選ばれ方はこの機能を入れる前と同じになり、形も再現できる。
         arc_rng = random.Random(
             None if config.random_seed is None else f"emotional-arc:{config.random_seed}"
+        )
+        # 劇的状況も別の乱数で選ぶ。理由は感情曲線と同じ。
+        situation_rng = random.Random(
+            None if config.random_seed is None else f"dramatic-situation:{config.random_seed}"
         )
         while completed_count < config.variation_count and attempts < max_attempts:
             attempts += 1
@@ -299,11 +327,18 @@ class ColabParityPipeline:
                 plot_type_text = draft["plot_type"]
                 plot_override = draft["plot"]
             else:
-                plot_spec = self._choose_plot_type(plot_types, config, rng)
+                plot_spec = self._choose_plot_type(plot_candidates, config, rng)
                 selected = self._select_elements(analysis, pools, rng)
                 # 選んだ形は要素と一緒に保存し、ドラフト再開・metadata.json・集計で使う。
                 selected["emotional_arc"] = self._choose_emotional_arc(config, arc_rng).name
-                plot_type_text = plot_spec.to_text()
+                situation = self._choose_dramatic_situation(
+                    plot_spec.name, config, situation_rng
+                )
+                selected["dramatic_situation"] = situation.label
+                logger.info("劇的状況: %s", situation.label)
+                # 状況は形式の記述に添えて、人物・骨子・プロットのプロンプトへ渡す。
+                # ドラフトにもこの文で保存されるので、再開しても同じ状況になる。
+                plot_type_text = f"{plot_spec.to_text()}\n{situation.to_text()}"
                 plot_override = None
 
                 characters = self.character_generator.generate(
@@ -318,7 +353,7 @@ class ColabParityPipeline:
                     skeleton = self.skeleton_generator.generate(
                         characters=characters,
                         world=skeleton_world,
-                        plot_type=plot_spec,
+                        plot_type=plot_type_text,
                         structure=structure,
                     )
 
@@ -477,6 +512,32 @@ class ColabParityPipeline:
         return EMOTIONAL_ARCS[rng.choice(sorted(EMOTIONAL_ARCS))]
 
     @staticmethod
+    def _plot_type_candidates(
+        plot_types: Tuple[PlotTypeSpec, ...],
+        config: PipelineConfig,
+    ) -> Tuple[PlotTypeSpec, ...]:
+        """選んでよい形式の候補。名前が21個と一字一句同じものだけを残す。"""
+        if config.fixed_plot_type:
+            return plot_types
+        candidates = tuple(item for item in plot_types if item.name in DEFAULT_PLOT_TYPES)
+        dropped = [item.name for item in plot_types if item.name not in DEFAULT_PLOT_TYPES]
+        if dropped:
+            logger.warning("一覧に無い名前のプロット形式を除外: %s", "、".join(dropped))
+        if config.dramatic_situation is not None:
+            table = situation_table()
+            candidates = tuple(
+                item for item in candidates
+                if not table.conflicts(item.name, config.dramatic_situation)
+            )
+        if not candidates:
+            raise ValueError(
+                "no usable plot type: the classifier returned "
+                f"{[item.name for item in plot_types]}, but plot types must be one of "
+                "DEFAULT_PLOT_TYPES and not excluded for the fixed dramatic_situation"
+            )
+        return candidates
+
+    @staticmethod
     def _choose_plot_type(
         plot_types: Tuple[PlotTypeSpec, ...],
         config: PipelineConfig,
@@ -488,6 +549,23 @@ class ColabParityPipeline:
                     return plot_type
             return PlotTypeSpec(name=config.fixed_plot_type)
         return rng.choice(plot_types)
+
+    @staticmethod
+    def _choose_dramatic_situation(
+        plot_type: str,
+        config: PipelineConfig,
+        rng: random.Random,
+    ) -> DramaticSituation:
+        """作品の劇的状況を返す。形式の除外表に載った状況は選ばない。"""
+        table = situation_table()
+        if config.dramatic_situation is not None:
+            situation = table.get(config.dramatic_situation)
+            if table.conflicts(plot_type, situation.number):
+                raise ValueError(
+                    f"dramatic_situation {situation.number} is excluded for plot type {plot_type}"
+                )
+            return situation
+        return rng.choice(table.allowed(plot_type))
 
     @staticmethod
     def _with_visual_prompts(story: Story, visuals: VisualPrompts) -> Story:
@@ -718,6 +796,30 @@ class ColabParityPipeline:
         return config
 
     @staticmethod
+    def _resume_dramatic_situation(output_dir: Path, config: PipelineConfig) -> PipelineConfig:
+        """再開時は、元のバッチと同じ劇的状況の固定を使う。"""
+        try:
+            manifest = json.loads(
+                (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError):
+            return config
+        saved = manifest.get("dramatic_situation") if isinstance(manifest, dict) else None
+        if saved is None:
+            return config
+        situation_table().get(saved)
+        if config.dramatic_situation is None:
+            updated = replace(config, dramatic_situation=saved)
+            updated.validate()
+            return updated
+        if config.dramatic_situation != saved:
+            raise ValueError(
+                f"resume dramatic_situation {config.dramatic_situation} does not match "
+                f"the original batch ({saved})"
+            )
+        return config
+
+    @staticmethod
     def _save_batch_manifest(
         output_dir: Path,
         config: PipelineConfig,
@@ -745,6 +847,7 @@ class ColabParityPipeline:
             # ストーリーボードは段数をこのキーから読むため、選んだ構造の段数を書く。
             "journey_stage_count": config.story_structure.stage_count,
             "emotional_arc": config.emotional_arc,
+            "dramatic_situation": config.dramatic_situation,
             "chapter_count": config.chapter_count,
             "max_chapter_continuations": config.max_chapter_continuations,
             "random_seed": config.random_seed,

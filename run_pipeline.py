@@ -14,6 +14,8 @@ from src.llm_factory import (
     create_provider_client,
     resolve_ollama_model,
 )
+from src.colab_features import DEFAULT_PLOT_TYPES
+from src.dramatic_situations import SITUATION_COUNT
 from src.plot_generator import DEFAULT_STRUCTURE, EMOTIONAL_ARCS, STORY_STRUCTURES
 
 SAMPLE = {
@@ -69,13 +71,17 @@ def main() -> int:
     parser.add_argument("--resume", dest="resume_dir", default=None,
                         help="既存のbatchディレクトリを指定して続きから再開")
     parser.add_argument("--seed", type=int, default=None, help="ランダム選択の再現用シード")
-    parser.add_argument("--plot-type", default=None, help="全パターンで固定するプロット形式")
+    parser.add_argument("--plot-type", default=None, choices=DEFAULT_PLOT_TYPES,
+                        help="全パターンで固定するプロット形式（21個のどれか）")
     parser.add_argument("--structure", default=None, choices=tuple(STORY_STRUCTURES),
                         help=f"物語構造（既定値: {DEFAULT_STRUCTURE}）")
     parser.add_argument("--journey-stages", type=int, choices=(11, 12), default=None,
                         help="ヒーローズ・ジャーニーの段階数（互換用。--structureと同時指定不可）")
     parser.add_argument("--emotional-arc", default=None, choices=tuple(EMOTIONAL_ARCS),
                         help="段ごとの感情の上下を決める形を全作品で固定する（既定値: 作品ごとに自動で選ぶ）")
+    parser.add_argument("--situation", type=int, default=None,
+                        choices=range(1, SITUATION_COUNT + 1), metavar="N",
+                        help="ポルティの劇的状況（1〜36）を全作品で固定する（既定値: 作品ごとに自動で選ぶ）")
     parser.add_argument("--chapter-count", type=int, default=10,
                         help="執筆する章数（既定値: 10）")
     parser.add_argument(
@@ -170,6 +176,7 @@ def main() -> int:
         generate_visual_prompts=not args.no_visual_prompts,
         structure=structure,
         emotional_arc=args.emotional_arc,
+        dramatic_situation=args.situation,
         chapter_count=args.chapter_count,
         max_chapter_continuations=args.max_chapter_continuations,
         output_dir=args.output_dir,

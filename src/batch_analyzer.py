@@ -19,7 +19,14 @@ SUMMARY_KEYS = (
     "ending",
     "key_motifs",
 )
-FREQUENCY_KEYS = ("want", "ability", "role", "narrative", "emotional_arc")
+FREQUENCY_KEYS = (
+    "want",
+    "ability",
+    "role",
+    "narrative",
+    "emotional_arc",
+    "dramatic_situation",
+)
 BODY_EXCLUSIONS = {
     "narrative_analysis.md",
     "world.md",
