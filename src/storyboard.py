@@ -541,12 +541,51 @@ def _units_for(source: _RunInput, selected_unit: str) -> List[Tuple[int, str, st
     return [(stage.number, f"{stage.number}. {stage.name}", stage.description) for stage in source.plot]
 
 
-def _stage_plan(stage_count: int) -> List[str]:
+# 段の性質（#55 項目1・#59）。wide＝引きの画にすべき段、peak＝感情が最も動く段。
+# 規則は #51 の決定5と同じ: 引きの段は extreme_long か long、感情が最も動く段は close_up。
+STAGE_ROLE_WIDE = "wide"
+STAGE_ROLE_PEAK = "peak"
+STAGE_ROLES = (STAGE_ROLE_WIDE, STAGE_ROLE_PEAK)
+_WIDE_SHOT_SIZES = ("extreme_long", "long")
+
+
+def _stage_plan(
+    stage_count: int, roles: Optional[Sequence[Optional[str]]] = None
+) -> List[str]:
+    """段数（と段ごとの性質）から、段ごとのショットサイズの並びを返す。
+
+    土台は ``stage_plans`` の段数ごとの並び。定義の無い段数は12段の並びから間引く。
+    ``roles`` を渡すと、その段の性質で土台を上書きする。``roles`` の各要素は
+    ``"wide"``・``"peak"``・``None``（性質なし）のどれか。渡さなければ土台のまま。
+    """
+    if stage_count < 1:
+        raise StoryboardError("プロット段階数が1未満です。")
+    plan = _base_stage_plan(stage_count)
+    if roles is None:
+        return plan
+    if len(roles) != stage_count:
+        raise StoryboardError(
+            f"段の性質の数({len(roles)})が段階数({stage_count})と一致しません。"
+        )
+    for index, role in enumerate(roles):
+        if role is None:
+            continue
+        if role == STAGE_ROLE_PEAK:
+            plan[index] = "close_up"
+        elif role == STAGE_ROLE_WIDE:
+            if plan[index] not in _WIDE_SHOT_SIZES:
+                plan[index] = "long"
+        else:
+            raise StoryboardError(
+                f"段{index + 1}の性質が不正です: {role}（{', '.join(STAGE_ROLES)} のどれか）"
+            )
+    return plan
+
+
+def _base_stage_plan(stage_count: int) -> List[str]:
     configured = SHOT_PLAN.get("stage_plans", {}).get(str(stage_count))
     if isinstance(configured, list) and len(configured) == stage_count:
         return [str(size) for size in configured]
-    if stage_count < 1:
-        raise StoryboardError("プロット段階数が1未満です。")
     twelve_stage_plan = SHOT_PLAN.get("stage_plans", {}).get("12")
     if not isinstance(twelve_stage_plan, list) or len(twelve_stage_plan) != 12:
         raise StoryboardError(f"12段階のショットサイズ設定が不正です: {SHOT_PLAN_PATH}")

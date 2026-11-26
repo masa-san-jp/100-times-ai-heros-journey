@@ -515,3 +515,54 @@ def test_storyboard_reads_plot_of_each_structure(tmp_path, structure_name):
     assert [shot["shot_size"] for shot in result.shots] == _stage_plan(
         structure.stage_count
     )
+
+
+# 段の性質からショットサイズを決める仕組み（#55 項目1・#59）
+
+
+@pytest.mark.parametrize("stage_count", (4, 7, 8, 11, 12, 15, 20))
+def test_stage_plan_without_roles_is_unchanged(stage_count):
+    assert _stage_plan(stage_count, None) == _stage_plan(stage_count)
+    assert _stage_plan(stage_count, [None] * stage_count) == _stage_plan(stage_count)
+
+
+def test_stage_plan_peak_role_becomes_close_up():
+    # 7段は stage_plans に定義が無く、12段から間引いた並びが土台になる
+    base = _stage_plan(7)
+    roles = [None] * 7
+    roles[3] = "peak"
+    plan = _stage_plan(7, roles)
+    assert plan[3] == "close_up"
+    assert plan[:3] + plan[4:] == base[:3] + base[4:]
+
+
+def test_stage_plan_wide_role_keeps_wide_base_and_widens_others():
+    base = _stage_plan(12)
+    assert base[0] == "extreme_long" and base[2] == "close_up"
+    roles = [None] * 12
+    roles[0] = "wide"  # すでに引きの画: 土台のまま
+    roles[2] = "wide"  # close_up: long に広げる
+    plan = _stage_plan(12, roles)
+    assert plan[0] == "extreme_long"
+    assert plan[2] == "long"
+    assert plan[1] == base[1] and plan[3:] == base[3:]
+
+
+def test_stage_plan_roles_for_undefined_stage_count_follow_rule_of_issue_51():
+    # 作品ごとに段数が変わる場合（例 9段）でも、最初と最後は引き、peak は close_up
+    roles = ["wide", None, None, None, None, "peak", None, None, "wide"]
+    plan = _stage_plan(9, roles)
+    assert len(plan) == 9
+    assert plan[0] in ("extreme_long", "long")
+    assert plan[-1] in ("extreme_long", "long")
+    assert plan[5] == "close_up"
+    assert all(size in storyboard.SHOT_SIZES for size in plan)
+
+
+def test_stage_plan_rejects_wrong_role_count_and_unknown_role():
+    with pytest.raises(StoryboardError):
+        _stage_plan(4, ["wide", None])
+    with pytest.raises(StoryboardError):
+        _stage_plan(4, [None, "climax", None, None])
+    with pytest.raises(StoryboardError):
+        _stage_plan(0, [])
