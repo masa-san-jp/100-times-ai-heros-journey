@@ -807,16 +807,78 @@ def test_pipeline_saves_emotional_arc_and_resume_reuses_it(tmp_path):
         )
 
 
-def test_pipeline_without_emotional_arc_writes_null(tmp_path):
+def _run_metadata(batch):
     import json
 
-    batch = ColabParityPipeline(client=FakeClient()).run(
-        _narrative(), _structure_config(tmp_path, batch_id="noarc")
+    return [
+        json.loads((path / "metadata.json").read_text(encoding="utf-8"))
+        for path in sorted(batch.output_dir.glob("run_*"))
+    ]
+
+
+def test_pipeline_chooses_emotional_arc_per_work_without_option(tmp_path):
+    import json
+
+    client = FakeClient()
+    batch = ColabParityPipeline(client=client).run(
+        _narrative(),
+        _structure_config(tmp_path, variation_count=6, batch_id="auto", deduplicate=False),
     )
     manifest = json.loads(
         (batch.output_dir / "batch_manifest.json").read_text(encoding="utf-8")
     )
+    # 固定指定なし（null）＝作品ごとに自動で選ぶ
     assert manifest["emotional_arc"] is None
+    arcs = [meta["selected_elements"]["emotional_arc"] for meta in _run_metadata(batch)]
+    assert len(arcs) == 6
+    assert set(arcs) <= set(ARC_DIRECTIONS)
+    # 各作品のプロット生成プロンプトに、その作品の形の上下が入る
+    structure_prompts = [p for p in client.json_calls if '"stages"' in p]
+    assert len(structure_prompts) == 6
+    for prompt, arc in zip(structure_prompts, arcs):
+        first = ARC_DIRECTIONS[arc][0]
+        assert f"1. 日常世界 (第一幕) ［感情: {first}］" in prompt
+
+
+def test_auto_emotional_arc_is_reproducible_and_keeps_element_choices(tmp_path):
+    def run(batch_id, **kwargs):
+        return _run_metadata(
+            ColabParityPipeline(client=FakeClient()).run(
+                _narrative(),
+                _structure_config(
+                    tmp_path, variation_count=4, batch_id=batch_id, deduplicate=False,
+                    **kwargs,
+                ),
+            )
+        )
+
+    first = run("seed-a")
+    second = run("seed-b")
+    fixed = run("seed-fixed", emotional_arc="tragedy")
+    assert [m["selected_elements"] for m in first] == [m["selected_elements"] for m in second]
+    assert [m["plot_type"] for m in first] == [m["plot_type"] for m in fixed]
+    # 形の選択は要素の乱数とは別。固定しても、要素とプロット形式の選ばれ方は変わらない
+    def without_arc(meta):
+        return {k: v for k, v in meta["selected_elements"].items() if k != "emotional_arc"}
+
+    assert [without_arc(m) for m in first] == [without_arc(m) for m in fixed]
+    assert {m["selected_elements"]["emotional_arc"] for m in fixed} == {"tragedy"}
+
+
+def test_batch_analyzer_counts_emotional_arcs():
+    from pathlib import Path
+    from src.batch_analyzer import BatchAnalyzer, CompletedRun
+
+    runs = [
+        CompletedRun(i, f"run_00{i}", Path("."),
+                     {"plot_type": "旅", "selected_elements": {"emotional_arc": arc}},
+                     Path("story.md"), "")
+        for i, arc in enumerate(("icarus", "tragedy", "icarus"), start=1)
+    ]
+    frequencies = BatchAnalyzer._frequency_payload(runs)
+    assert frequencies["emotional_arc"][0] == {
+        "value": "icarus", "count": 2, "runs": ["run_001", "run_003"],
+    }
 
 
 def test_cli_rejects_unknown_emotional_arc(monkeypatch, capsys):

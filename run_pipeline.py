@@ -75,7 +75,7 @@ def main() -> int:
     parser.add_argument("--journey-stages", type=int, choices=(11, 12), default=None,
                         help="ヒーローズ・ジャーニーの段階数（互換用。--structureと同時指定不可）")
     parser.add_argument("--emotional-arc", default=None, choices=tuple(EMOTIONAL_ARCS),
-                        help="段ごとの感情の上下を決める形（既定値: 指定なし）")
+                        help="段ごとの感情の上下を決める形を全作品で固定する（既定値: 作品ごとに自動で選ぶ）")
     parser.add_argument("--chapter-count", type=int, default=10,
                         help="執筆する章数（既定値: 10）")
     parser.add_argument(

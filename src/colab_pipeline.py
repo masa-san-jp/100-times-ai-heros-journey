@@ -32,6 +32,7 @@ from .narrative_analyzer import NarrativeAnalysis, NarrativeAnalyzer, NarrativeI
 from .ollama_client import OllamaClient, OllamaConfig
 from .plot_generator import (
     EMOTIONAL_ARCS,
+    EmotionalArc,
     STORY_STRUCTURES,
     StoryStructure,
     apply_emotional_arc,
@@ -62,7 +63,8 @@ class PipelineConfig:
     journey_stage_count: int = 12
     # 物語構造の名前（STORY_STRUCTURES のキー）。None なら journey_stage_count から決める。
     structure: Optional[str] = None
-    # 感情曲線の形（EMOTIONAL_ARCS のキー、#61）。None なら段に感情の向きを付けない。
+    # 感情曲線の形（EMOTIONAL_ARCS のキー、#61）。None なら作品ごとに6つの形から
+    # 自動で選ぶ。指定すると全作品をその形に固定する。
     emotional_arc: Optional[str] = None
     chapter_count: Optional[int] = 10
     max_chapter_continuations: int = 2
@@ -267,11 +269,12 @@ class ColabParityPipeline:
 
         stories = []
         structure = config.story_structure
-        arc = get_emotional_arc(config.emotional_arc) if config.emotional_arc else None
-        stage_definitions = apply_emotional_arc(structure.stages, arc)
         logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
-        if arc is not None:
-            logger.info("感情曲線: %s（%s）", arc.name, "→".join(arc.directions))
+        # 感情曲線は要素選択とは別の乱数で選ぶ。同じシードなら、プロット形式と要素の
+        # 選ばれ方はこの機能を入れる前と同じになり、形も再現できる。
+        arc_rng = random.Random(
+            None if config.random_seed is None else f"emotional-arc:{config.random_seed}"
+        )
         while completed_count < config.variation_count and attempts < max_attempts:
             attempts += 1
             logger.info(
@@ -298,6 +301,8 @@ class ColabParityPipeline:
             else:
                 plot_spec = self._choose_plot_type(plot_types, config, rng)
                 selected = self._select_elements(analysis, pools, rng)
+                # 選んだ形は要素と一緒に保存し、ドラフト再開・metadata.json・集計で使う。
+                selected["emotional_arc"] = self._choose_emotional_arc(config, arc_rng).name
                 plot_type_text = plot_spec.to_text()
                 plot_override = None
 
@@ -316,6 +321,12 @@ class ColabParityPipeline:
                         plot_type=plot_spec,
                         structure=structure,
                     )
+
+            arc_name = selected.get("emotional_arc")
+            arc = get_emotional_arc(arc_name) if arc_name else None
+            if arc is not None:
+                logger.info("感情曲線: %s（%s）", arc.name, "→".join(arc.directions))
+            stage_definitions = apply_emotional_arc(structure.stages, arc)
 
             try:
                 story = self.story_generator.generate_from_components(
@@ -457,6 +468,13 @@ class ColabParityPipeline:
             "ability": rng.choice(pools.abilities),
             "role": rng.choice(pools.roles),
         }
+
+    @staticmethod
+    def _choose_emotional_arc(config: PipelineConfig, rng: random.Random) -> EmotionalArc:
+        """作品の感情曲線の形を返す。固定指定が無ければ6つの形から選ぶ。"""
+        if config.emotional_arc:
+            return get_emotional_arc(config.emotional_arc)
+        return EMOTIONAL_ARCS[rng.choice(sorted(EMOTIONAL_ARCS))]
 
     @staticmethod
     def _choose_plot_type(
