@@ -30,7 +30,15 @@ from .colab_features import (
 )
 from .narrative_analyzer import NarrativeAnalysis, NarrativeAnalyzer, NarrativeInput
 from .ollama_client import OllamaClient, OllamaConfig
-from .plot_generator import STORY_STRUCTURES, StoryStructure, get_story_structure
+from .plot_generator import (
+    EMOTIONAL_ARCS,
+    EmotionalArc,
+    STORY_STRUCTURES,
+    StoryStructure,
+    apply_emotional_arc,
+    get_emotional_arc,
+    get_story_structure,
+)
 from .sheet_storage import append_row_by_columns, append_story
 from .story_generator import (
     ChapterGenerationError,
@@ -55,6 +63,9 @@ class PipelineConfig:
     journey_stage_count: int = 12
     # 物語構造の名前（STORY_STRUCTURES のキー）。None なら journey_stage_count から決める。
     structure: Optional[str] = None
+    # 感情曲線の形（EMOTIONAL_ARCS のキー、#61）。None なら作品ごとに6つの形から
+    # 自動で選ぶ。指定すると全作品をその形に固定する。
+    emotional_arc: Optional[str] = None
     chapter_count: Optional[int] = 10
     max_chapter_continuations: int = 2
     output_dir: str = "output"
@@ -80,6 +91,10 @@ class PipelineConfig:
                 )
             if self.journey_stage_count != 12:
                 raise ValueError("structure and journey_stage_count cannot be used together")
+        if self.emotional_arc is not None and self.emotional_arc not in EMOTIONAL_ARCS:
+            raise ValueError(
+                f"emotional_arc must be one of: {', '.join(EMOTIONAL_ARCS)}"
+            )
         if self.chapter_count is not None:
             if not isinstance(self.chapter_count, int) or self.chapter_count < 1:
                 raise ValueError("chapter_count must be a positive integer")
@@ -191,6 +206,7 @@ class ColabParityPipeline:
         if resumed and output_dir is not None:
             self._validate_resume_narrative(output_dir, narrative)
             config = self._resume_structure(output_dir, config)
+            config = self._resume_emotional_arc(output_dir, config)
             preparation = self._load_preparation(output_dir)
 
         if preparation is not None:
@@ -253,8 +269,12 @@ class ColabParityPipeline:
 
         stories = []
         structure = config.story_structure
-        stage_definitions = structure.stages
         logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
+        # 感情曲線は要素選択とは別の乱数で選ぶ。同じシードなら、プロット形式と要素の
+        # 選ばれ方はこの機能を入れる前と同じになり、形も再現できる。
+        arc_rng = random.Random(
+            None if config.random_seed is None else f"emotional-arc:{config.random_seed}"
+        )
         while completed_count < config.variation_count and attempts < max_attempts:
             attempts += 1
             logger.info(
@@ -281,6 +301,8 @@ class ColabParityPipeline:
             else:
                 plot_spec = self._choose_plot_type(plot_types, config, rng)
                 selected = self._select_elements(analysis, pools, rng)
+                # 選んだ形は要素と一緒に保存し、ドラフト再開・metadata.json・集計で使う。
+                selected["emotional_arc"] = self._choose_emotional_arc(config, arc_rng).name
                 plot_type_text = plot_spec.to_text()
                 plot_override = None
 
@@ -299,6 +321,12 @@ class ColabParityPipeline:
                         plot_type=plot_spec,
                         structure=structure,
                     )
+
+            arc_name = selected.get("emotional_arc")
+            arc = get_emotional_arc(arc_name) if arc_name else None
+            if arc is not None:
+                logger.info("感情曲線: %s（%s）", arc.name, "→".join(arc.directions))
+            stage_definitions = apply_emotional_arc(structure.stages, arc)
 
             try:
                 story = self.story_generator.generate_from_components(
@@ -440,6 +468,13 @@ class ColabParityPipeline:
             "ability": rng.choice(pools.abilities),
             "role": rng.choice(pools.roles),
         }
+
+    @staticmethod
+    def _choose_emotional_arc(config: PipelineConfig, rng: random.Random) -> EmotionalArc:
+        """作品の感情曲線の形を返す。固定指定が無ければ6つの形から選ぶ。"""
+        if config.emotional_arc:
+            return get_emotional_arc(config.emotional_arc)
+        return EMOTIONAL_ARCS[rng.choice(sorted(EMOTIONAL_ARCS))]
 
     @staticmethod
     def _choose_plot_type(
@@ -660,6 +695,29 @@ class ColabParityPipeline:
         return config
 
     @staticmethod
+    def _resume_emotional_arc(output_dir: Path, config: PipelineConfig) -> PipelineConfig:
+        """再開時は、元のバッチと同じ感情曲線を使う。"""
+        try:
+            manifest = json.loads(
+                (output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+            )
+        except (OSError, json.JSONDecodeError):
+            return config
+        saved = manifest.get("emotional_arc") if isinstance(manifest, dict) else None
+        if not saved:
+            return config
+        if saved not in EMOTIONAL_ARCS:
+            raise ValueError(f"batch_manifest.json has unknown emotional_arc: {saved}")
+        if config.emotional_arc is None:
+            return replace(config, emotional_arc=saved)
+        if config.emotional_arc != saved:
+            raise ValueError(
+                f"resume emotional_arc {config.emotional_arc} does not match "
+                f"the original batch ({saved})"
+            )
+        return config
+
+    @staticmethod
     def _save_batch_manifest(
         output_dir: Path,
         config: PipelineConfig,
@@ -686,6 +744,7 @@ class ColabParityPipeline:
             "structure": config.structure_name,
             # ストーリーボードは段数をこのキーから読むため、選んだ構造の段数を書く。
             "journey_stage_count": config.story_structure.stage_count,
+            "emotional_arc": config.emotional_arc,
             "chapter_count": config.chapter_count,
             "max_chapter_continuations": config.max_chapter_continuations,
             "random_seed": config.random_seed,

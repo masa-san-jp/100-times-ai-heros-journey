@@ -665,3 +665,226 @@ def test_pipeline_passes_structure_to_skeleton(tmp_path):
     skeleton_prompts = [p for p in client.chat_calls if "物語プロットの" in p]
     assert len(skeleton_prompts) == 5
     assert "1. You" in skeleton_prompts[0]
+
+
+# 感情曲線の指定（#61、出典は Reagan ほか 2016 の6つの基本形）
+
+ARC_DIRECTIONS = {
+    "rags-to-riches": ("上昇",),
+    "tragedy": ("下降",),
+    "man-in-a-hole": ("下降", "上昇"),
+    "icarus": ("上昇", "下降"),
+    "cinderella": ("上昇", "下降", "上昇"),
+    "oedipus": ("下降", "上昇", "下降"),
+}
+
+
+def test_emotional_arcs_match_the_six_shapes_of_the_source():
+    from src.plot_generator import EMOTIONAL_ARCS
+
+    assert {name: arc.directions for name, arc in EMOTIONAL_ARCS.items()} == ARC_DIRECTIONS
+
+
+@pytest.mark.parametrize("arc_name", tuple(ARC_DIRECTIONS))
+@pytest.mark.parametrize("stage_count", (4, 8, 11, 12, 15))
+def test_emotion_directions_split_stages_evenly_in_order(arc_name, stage_count):
+    from src.plot_generator import emotion_directions, get_emotional_arc
+
+    arc = get_emotional_arc(arc_name)
+    directions = emotion_directions(arc, stage_count)
+    assert len(directions) == stage_count
+    # 区間の向きが、形の並びどおりに前から現れる
+    runs = [directions[0]]
+    for direction in directions[1:]:
+        if direction != runs[-1]:
+            runs.append(direction)
+    assert tuple(runs) == ARC_DIRECTIONS[arc_name]
+    # 各区間の段数の差は1以内（等分）
+    sizes = []
+    for direction in directions:
+        if sizes and sizes[-1][0] == direction:
+            sizes[-1][1] += 1
+        else:
+            sizes.append([direction, 1])
+    counts = [count for _, count in sizes]
+    assert max(counts) - min(counts) <= 1
+
+
+def test_emotion_directions_for_12_stage_man_in_a_hole():
+    from src.plot_generator import emotion_directions, get_emotional_arc
+
+    assert emotion_directions(get_emotional_arc("man-in-a-hole"), 12) == (
+        ("下降",) * 6 + ("上昇",) * 6
+    )
+
+
+def test_unknown_emotional_arc_is_rejected():
+    from src.plot_generator import get_emotional_arc
+
+    with pytest.raises(ValueError, match="unknown emotional arc"):
+        get_emotional_arc("vonnegut")
+    with pytest.raises(ValueError, match="emotional_arc"):
+        PipelineConfig(emotional_arc="vonnegut").validate()
+
+
+def test_plot_prompts_include_stage_emotions_and_keep_plot_format():
+    from src.plot_generator import apply_emotional_arc, get_emotional_arc
+
+    definitions = apply_emotional_arc(JOURNEY_STAGES_12, get_emotional_arc("man-in-a-hole"))
+    client = FakeClient()
+    plot = PlotGenerator(client).generate(_characters(), stage_definitions=definitions)
+
+    structure_prompt = client.json_calls[-1]
+    outline_prompt = client.chat_calls[-1]
+    for prompt in (structure_prompt, outline_prompt):
+        assert "1. 日常世界 (第一幕) ［感情: 下降］" in prompt
+        assert "12. 宝を持ち帰る (第三幕) ［感情: 上昇］" in prompt
+        assert "各段の［感情］に従うこと" in prompt
+    # プロット本文の「N. 名前 (第X幕)」の形式は変わらない（#38）
+    assert "\n1. 日常世界 (第一幕)\n" in plot.to_text()
+    assert "感情" not in plot.to_text()
+
+
+def test_plot_prompts_without_emotional_arc_are_unchanged():
+    from src.plot_generator import apply_emotional_arc
+
+    with_none = FakeClient()
+    PlotGenerator(with_none).generate(
+        _characters(), stage_definitions=apply_emotional_arc(JOURNEY_STAGES_12, None)
+    )
+    default = FakeClient()
+    PlotGenerator(default).generate(_characters())
+    assert with_none.json_calls == default.json_calls
+    assert with_none.chat_calls == default.chat_calls
+    assert "感情" not in default.json_calls[-1]
+    assert "感情" not in default.chat_calls[-1]
+
+
+def test_pipeline_saves_emotional_arc_and_resume_reuses_it(tmp_path):
+    import json
+
+    client = FakeClient()
+    first = ColabParityPipeline(client=client).run(
+        _narrative(),
+        _structure_config(
+            tmp_path, structure="kishotenketsu-4", emotional_arc="icarus", batch_id="arc"
+        ),
+    )
+    manifest = json.loads(
+        (first.output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["emotional_arc"] == "icarus"
+    structure_prompts = [p for p in client.json_calls if '"stages"' in p]
+    assert "1. 起 (第一幕): " in structure_prompts[0]
+    assert "［感情: 上昇］" in structure_prompts[0]
+    assert "4. 結 (第三幕): " in structure_prompts[0]
+    assert structure_prompts[0].rstrip().count("［感情: 下降］") == 2
+
+    resumed_client = FakeClient()
+    ColabParityPipeline(client=resumed_client).run(
+        _narrative(),
+        _structure_config(
+            tmp_path,
+            output_dir="output",
+            variation_count=2,
+            resume_dir=str(first.output_dir),
+            deduplicate=False,
+        ),
+    )
+    resumed_prompts = [p for p in resumed_client.json_calls if '"stages"' in p]
+    assert resumed_prompts and "［感情: 上昇］" in resumed_prompts[0]
+
+    with pytest.raises(ValueError, match="does not match"):
+        ColabParityPipeline(client=FakeClient()).run(
+            _narrative(),
+            _structure_config(
+                tmp_path,
+                output_dir="output",
+                variation_count=3,
+                emotional_arc="tragedy",
+                resume_dir=str(first.output_dir),
+            ),
+        )
+
+
+def _run_metadata(batch):
+    import json
+
+    return [
+        json.loads((path / "metadata.json").read_text(encoding="utf-8"))
+        for path in sorted(batch.output_dir.glob("run_*"))
+    ]
+
+
+def test_pipeline_chooses_emotional_arc_per_work_without_option(tmp_path):
+    import json
+
+    client = FakeClient()
+    batch = ColabParityPipeline(client=client).run(
+        _narrative(),
+        _structure_config(tmp_path, variation_count=6, batch_id="auto", deduplicate=False),
+    )
+    manifest = json.loads(
+        (batch.output_dir / "batch_manifest.json").read_text(encoding="utf-8")
+    )
+    # 固定指定なし（null）＝作品ごとに自動で選ぶ
+    assert manifest["emotional_arc"] is None
+    arcs = [meta["selected_elements"]["emotional_arc"] for meta in _run_metadata(batch)]
+    assert len(arcs) == 6
+    assert set(arcs) <= set(ARC_DIRECTIONS)
+    # 各作品のプロット生成プロンプトに、その作品の形の上下が入る
+    structure_prompts = [p for p in client.json_calls if '"stages"' in p]
+    assert len(structure_prompts) == 6
+    for prompt, arc in zip(structure_prompts, arcs):
+        first = ARC_DIRECTIONS[arc][0]
+        assert f"1. 日常世界 (第一幕) ［感情: {first}］" in prompt
+
+
+def test_auto_emotional_arc_is_reproducible_and_keeps_element_choices(tmp_path):
+    def run(batch_id, **kwargs):
+        return _run_metadata(
+            ColabParityPipeline(client=FakeClient()).run(
+                _narrative(),
+                _structure_config(
+                    tmp_path, variation_count=4, batch_id=batch_id, deduplicate=False,
+                    **kwargs,
+                ),
+            )
+        )
+
+    first = run("seed-a")
+    second = run("seed-b")
+    fixed = run("seed-fixed", emotional_arc="tragedy")
+    assert [m["selected_elements"] for m in first] == [m["selected_elements"] for m in second]
+    assert [m["plot_type"] for m in first] == [m["plot_type"] for m in fixed]
+    # 形の選択は要素の乱数とは別。固定しても、要素とプロット形式の選ばれ方は変わらない
+    def without_arc(meta):
+        return {k: v for k, v in meta["selected_elements"].items() if k != "emotional_arc"}
+
+    assert [without_arc(m) for m in first] == [without_arc(m) for m in fixed]
+    assert {m["selected_elements"]["emotional_arc"] for m in fixed} == {"tragedy"}
+
+
+def test_batch_analyzer_counts_emotional_arcs():
+    from pathlib import Path
+    from src.batch_analyzer import BatchAnalyzer, CompletedRun
+
+    runs = [
+        CompletedRun(i, f"run_00{i}", Path("."),
+                     {"plot_type": "旅", "selected_elements": {"emotional_arc": arc}},
+                     Path("story.md"), "")
+        for i, arc in enumerate(("icarus", "tragedy", "icarus"), start=1)
+    ]
+    frequencies = BatchAnalyzer._frequency_payload(runs)
+    assert frequencies["emotional_arc"][0] == {
+        "value": "icarus", "count": 2, "runs": ["run_001", "run_003"],
+    }
+
+
+def test_cli_rejects_unknown_emotional_arc(monkeypatch, capsys):
+    import run_pipeline
+
+    monkeypatch.setattr("sys.argv", ["run_pipeline.py", "--emotional-arc", "vonnegut"])
+    with pytest.raises(SystemExit):
+        run_pipeline.main()
+    assert "--emotional-arc" in capsys.readouterr().err

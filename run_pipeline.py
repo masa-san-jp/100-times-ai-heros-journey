@@ -14,7 +14,7 @@ from src.llm_factory import (
     create_provider_client,
     resolve_ollama_model,
 )
-from src.plot_generator import DEFAULT_STRUCTURE, STORY_STRUCTURES
+from src.plot_generator import DEFAULT_STRUCTURE, EMOTIONAL_ARCS, STORY_STRUCTURES
 
 SAMPLE = {
     "author": "未知を学び、本質を考え、空想することが好き。",
@@ -74,6 +74,8 @@ def main() -> int:
                         help=f"物語構造（既定値: {DEFAULT_STRUCTURE}）")
     parser.add_argument("--journey-stages", type=int, choices=(11, 12), default=None,
                         help="ヒーローズ・ジャーニーの段階数（互換用。--structureと同時指定不可）")
+    parser.add_argument("--emotional-arc", default=None, choices=tuple(EMOTIONAL_ARCS),
+                        help="段ごとの感情の上下を決める形を全作品で固定する（既定値: 作品ごとに自動で選ぶ）")
     parser.add_argument("--chapter-count", type=int, default=10,
                         help="執筆する章数（既定値: 10）")
     parser.add_argument(
@@ -167,6 +169,7 @@ def main() -> int:
         generate_skeleton=not args.no_skeleton,
         generate_visual_prompts=not args.no_visual_prompts,
         structure=structure,
+        emotional_arc=args.emotional_arc,
         chapter_count=args.chapter_count,
         max_chapter_continuations=args.max_chapter_continuations,
         output_dir=args.output_dir,
