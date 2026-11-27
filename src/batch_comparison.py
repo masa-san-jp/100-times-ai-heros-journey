@@ -101,7 +101,11 @@ def _batch_payload(path: Path, out: Path) -> Dict[str, Any]:
         "path": str(path),
         "structure": structure,
         "structure_label": known.label if known else "不明",
-        "stage_count": known.stage_count if known else manifest.get("journey_stage_count"),
+        # 作品ごとに段を選ぶ構造（プロップの31機能）は段数が作品ごとに違う。段の一覧は候補の全体。
+        "stage_count": (
+            "作品ごと" if known and known.per_work
+            else known.stage_count if known else manifest.get("journey_stage_count")
+        ),
         "stage_names": [s["name"] for s in known.stages] if known else [],
         "model": manifest.get("model", "記録なし"),
         "provider": manifest.get("provider", "記録なし"),

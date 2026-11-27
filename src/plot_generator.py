@@ -11,6 +11,7 @@ from typing import Any, List, Mapping, Optional, Sequence, Tuple
 from dataclasses import dataclass
 from .ollama_client import OllamaClient
 from .character_generator import CharacterSet
+from . import propp
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,8 @@ class StoryStructure:
     # プロット骨子A〜Eの各部に当たる段の番号。None ならヒーローズ・ジャーニー用の
     # 既存の骨子要件（PlotSkeletonGenerator.PART_PROMPTS）を使う。
     skeleton_parts: Optional[Mapping[str, Tuple[int, ...]]] = None
+    # True なら、作品ごとに段を選び直す構造（プロップの31機能）。``stages`` は候補の全体。
+    per_work: bool = False
 
     @property
     def stage_count(self) -> int:
@@ -171,6 +174,35 @@ STORY_STRUCTURES = {
         },
     ),
 }
+
+
+def propp_structure(keys) -> StoryStructure:
+    """選んだプロップの機能（キーの並び）から、作品1つ分の構造を作る（#59）。"""
+    definitions, parts = propp.stage_definitions(keys)
+    return StoryStructure(
+        propp.PROPP_STRUCTURE, propp.PROPP_LABEL, definitions,
+        skeleton_parts=parts, per_work=True,
+    )
+
+
+# 候補の全体（31機能。第8機能は「加害」の形）。作品ごとの並びは
+# ``structure_for_work`` で作る。
+STORY_STRUCTURES[propp.PROPP_STRUCTURE] = propp_structure(propp.ALL_KEYS)
+
+# 作品ごとに選んだプロップの機能を保存する selected_elements のキー。
+PROPP_FUNCTIONS_KEY = "propp_functions"
+
+
+def structure_for_work(
+    structure: StoryStructure, selected_elements: Mapping[str, Any]
+) -> StoryStructure:
+    """作品に使う構造を返す。作品ごとに段を選ぶ構造なら、選んだ並びから作る。"""
+    if not structure.per_work:
+        return structure
+    value = selected_elements.get(PROPP_FUNCTIONS_KEY)
+    if not value:
+        raise ValueError(f"selected_elements has no {PROPP_FUNCTIONS_KEY} for {structure.name}")
+    return propp_structure(propp.parse_functions(value))
 
 
 def get_story_structure(name: str) -> StoryStructure:

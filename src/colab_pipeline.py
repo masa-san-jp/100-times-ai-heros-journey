@@ -29,6 +29,7 @@ from .colab_features import (
     WorldGenerator,
     WorldSetting,
 )
+from . import propp
 from .dramatic_situations import DramaticSituation, situation_table
 from .narrative_analyzer import NarrativeAnalysis, NarrativeAnalyzer, NarrativeInput
 from .ollama_client import OllamaClient, OllamaConfig
@@ -40,6 +41,8 @@ from .plot_generator import (
     apply_emotional_arc,
     get_emotional_arc,
     get_story_structure,
+    PROPP_FUNCTIONS_KEY,
+    structure_for_work,
 )
 from .sheet_storage import append_row_by_columns, append_story
 from .story_generator import (
@@ -293,7 +296,10 @@ class ColabParityPipeline:
         # 生成を始める前に止める（#60）。
         plot_candidates = self._plot_type_candidates(plot_types, config)
         structure = config.story_structure
-        logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
+        if structure.per_work:
+            logger.info("物語構造: %s（作品ごとに段を選ぶ）", structure.name)
+        else:
+            logger.info("物語構造: %s（%d段階）", structure.name, structure.stage_count)
         # 感情曲線は要素選択とは別の乱数で選ぶ。同じシードなら、プロット形式と要素の
         # 選ばれ方はこの機能を入れる前と同じになり、形も再現できる。
         arc_rng = random.Random(
@@ -302,6 +308,10 @@ class ColabParityPipeline:
         # 劇的状況も別の乱数で選ぶ。理由は感情曲線と同じ。
         situation_rng = random.Random(
             None if config.random_seed is None else f"dramatic-situation:{config.random_seed}"
+        )
+        # プロップの機能の並びも別の乱数で選ぶ（#59）。ほかの選ばれ方は変わらない。
+        propp_rng = random.Random(
+            None if config.random_seed is None else f"propp-functions:{config.random_seed}"
         )
         while completed_count < config.variation_count and attempts < max_attempts:
             attempts += 1
@@ -326,6 +336,7 @@ class ColabParityPipeline:
                 selected = draft["selected_elements"]
                 plot_type_text = draft["plot_type"]
                 plot_override = draft["plot"]
+                work_structure = structure_for_work(structure, selected)
             else:
                 plot_spec = self._choose_plot_type(plot_candidates, config, rng)
                 selected = self._select_elements(analysis, pools, rng)
@@ -336,6 +347,11 @@ class ColabParityPipeline:
                 )
                 selected["dramatic_situation"] = situation.label
                 logger.info("劇的状況: %s", situation.label)
+                if structure.per_work:
+                    selected[PROPP_FUNCTIONS_KEY] = propp.format_functions(
+                        propp.choose_functions(propp_rng)
+                    )
+                work_structure = structure_for_work(structure, selected)
                 # 状況は形式の記述に添えて、人物・骨子・プロットのプロンプトへ渡す。
                 # ドラフトにもこの文で保存されるので、再開しても同じ状況になる。
                 plot_type_text = f"{plot_spec.to_text()}\n{situation.to_text()}"
@@ -354,14 +370,19 @@ class ColabParityPipeline:
                         characters=characters,
                         world=skeleton_world,
                         plot_type=plot_type_text,
-                        structure=structure,
+                        structure=work_structure,
                     )
 
             arc_name = selected.get("emotional_arc")
             arc = get_emotional_arc(arc_name) if arc_name else None
             if arc is not None:
                 logger.info("感情曲線: %s（%s）", arc.name, "→".join(arc.directions))
-            stage_definitions = apply_emotional_arc(structure.stages, arc)
+            if structure.per_work:
+                logger.info(
+                    "プロップの機能: %s（%d段）",
+                    selected[PROPP_FUNCTIONS_KEY], work_structure.stage_count,
+                )
+            stage_definitions = apply_emotional_arc(work_structure.stages, arc)
 
             try:
                 story = self.story_generator.generate_from_components(
@@ -374,7 +395,7 @@ class ColabParityPipeline:
                     write_chapters=config.write_chapters,
                     chapter_count=config.chapter_count,
                     stage_definitions=stage_definitions,
-                    structure_label=structure.label,
+                    structure_label=work_structure.label,
                     max_chapter_continuations=config.max_chapter_continuations,
                     checkpoint_dir=checkpoint_dir,
                     plot_override=plot_override,
@@ -423,6 +444,7 @@ class ColabParityPipeline:
                     base_dir=str(output_dir),
                     run_id=f"{next_index:03d}",
                     structure=structure.name,
+                    stage_roles=_stage_roles(work_structure),
                 )
                 existing_ids.add(next_index)
                 next_index += 1
@@ -845,7 +867,11 @@ class ColabParityPipeline:
             "generate_visual_prompts": config.generate_visual_prompts,
             "structure": config.structure_name,
             # ストーリーボードは段数をこのキーから読むため、選んだ構造の段数を書く。
-            "journey_stage_count": config.story_structure.stage_count,
+            # 作品ごとに段を選ぶ構造では段数が作品ごとに違うので書かない（各runの
+            # metadata.json の stage_count を使う）。
+            "journey_stage_count": (
+                None if config.story_structure.per_work else config.story_structure.stage_count
+            ),
             "emotional_arc": config.emotional_arc,
             "dramatic_situation": config.dramatic_situation,
             "chapter_count": config.chapter_count,
@@ -860,3 +886,9 @@ class ColabParityPipeline:
             json.dumps(manifest, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+
+
+def _stage_roles(structure: StoryStructure) -> Optional[list]:
+    """段の性質（wide・peak・None）の並び。性質を持たない構造は None（書かない）。"""
+    roles = [stage.get("role") for stage in structure.stages]
+    return roles if any(roles) else None

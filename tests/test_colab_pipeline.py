@@ -469,7 +469,7 @@ def test_new_structures_have_documented_stage_names():
         "起", "承", "転", "結",
     ]
     with pytest.raises(ValueError, match="unknown structure"):
-        get_story_structure("propp-31")
+        get_story_structure("propp-99")
 
 
 def test_structure_config_validation():
