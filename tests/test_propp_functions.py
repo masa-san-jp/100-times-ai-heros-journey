@@ -232,3 +232,25 @@ def test_resume_keeps_the_structure_and_draws_new_works(tmp_path):
     assert {m["structure"] for m in metas} == {"propp-31"}
     for meta in metas:
         propp.parse_functions(meta["selected_elements"][PROPP_FUNCTIONS_KEY])
+
+
+def test_propp_and_dramatic_situation_work_together(tmp_path):
+    """プロップの構造でも劇的状況（#60）を選び、骨子のプロンプトに両方が入る。"""
+    from src.dramatic_situations import situation_table
+
+    client = FakeClient()
+    batch = _run(tmp_path, client, variation_count=2, generate_skeleton=True)
+    metas = _run_metadata(batch)
+    situations = {s.label: s for s in situation_table().situations}
+    skeleton_prompts = [p for p in client.chat_calls if "プロップの31機能の次の段" in p]
+    assert len(skeleton_prompts) == 10
+    for index, meta in enumerate(metas):
+        selected = meta["selected_elements"]
+        keys = propp.parse_functions(selected[PROPP_FUNCTIONS_KEY])
+        situation = situations[selected["dramatic_situation"]]
+        assert situation.to_text() in meta["plot_type"]
+        work = propp_structure(keys)
+        for part, prompt in zip("ABCDE", skeleton_prompts[index * 5 : index * 5 + 5]):
+            assert situation.to_text() in prompt
+            for number in work.skeleton_parts[part]:
+                assert f"{number}. {work.stages[number - 1]['name']}" in prompt

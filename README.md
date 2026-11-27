@@ -283,6 +283,8 @@ storyboard/
 | `--structure NAME` | `journey-12` | 物語構造。`journey-12` / `journey-11` / `story-circle-8` / `save-the-cat-15` / `kishotenketsu-4` / `propp-31`（[生成される工程](#生成される工程)を参照） |
 | `--journey-stages 11\|12` | `12` | ヒーローズ・ジャーニーの段階数（互換用。`--structure journey-11` と同じ。`--structure`と同時には指定できません） |
 | `--emotional-arc NAME` | 作品ごとに自動 | 段ごとの感情の上下を決める形を全作品で固定する。`rags-to-riches` / `tragedy` / `man-in-a-hole` / `icarus` / `cinderella` / `oedipus`（[感情曲線を指定する](#感情曲線を指定する)を参照） |
+| `--situation N` | 作品ごとに自動 | ポルティの劇的状況（1〜36）を全作品で固定する（[劇的状況を指定する](#劇的状況を指定する)を参照） |
+| `--plot-type NAME` | 作品ごとに自動 | プロット形式を全作品で固定する。21個の形式のどれか（`src/colab_features.py`の`DEFAULT_PLOT_TYPES`）と一字一句同じ名前に限る |
 | `--chapter-count N` | `10` | 1作品の章数 |
 | `--resume DIR` | なし | 既存バッチを途中再開 |
 | `--batch-id NAME` | 自動生成 | `output/batch_NAME` として保存 |
@@ -393,6 +395,7 @@ python run_pipeline.py --structure story-circle-8 --loops 1 --pool-size 3 --no-c
 - 骨子A〜Eと幕は、機能の番号で決まります。A（1〜11、第一幕）、B（12〜15、第二幕）、C（16〜19、第二幕）、D（20〜28、第三幕）、E（29〜31、第三幕）。どの部にも機能が1つも無いときは、その部の組から1つを選んで入れます。原典に幕の区分は無く、幕の割り当ては原典の「準備部（1〜7）」「発端（8〜11）」「頂点（19）」をもとに決めたものです。
 - 選んだ機能は`metadata.json`の`selected_elements.propp_functions`に`"1,8a,11,19,…"`の形で残ります。
 - ストーリーボードは、各runの`metadata.json`の`stage_roles`から段の性質を読み、最初と最後の段を引きの画、第19機能（解消）の段を close_up にします（#51 の決定5と同じ規則）。
+- 劇的状況（[劇的状況を指定する](#劇的状況を指定する)）はプロップの構造でも作品ごとに付き、骨子とプロットのプロンプトに入ります。
 - 原典が書く「二つめの展開（ход）」（帰り道で兄たちに獲物を奪われ、探索をやり直す流れ）は扱いません。機能は1回ずつです。
 
 ```bash
@@ -423,6 +426,23 @@ python run_pipeline.py --emotional-arc man-in-a-hole --loops 1 --pool-size 3 --n
 - 6つの形の出典は、Reagan ほか「The emotional arcs of stories are dominated by six basic shapes」（EPJ Data Science 5:31、2016）。Project Gutenberg の英語の小説1,327冊の語の感情価から得られた基本形です。知識ベースの[arayashiki-culture cul-0024](https://github.com/masa-san-jp/arayashiki-culture/blob/main/entries/reagan-2016-emotional-arcs-of-stories.md)にまとめてあります。ヴォネガットが講演で語った形とは数も名前も同じではありません。
 - 各作品の形は`metadata.json`の`selected_elements.emotional_arc`に残り、`analyze_batch.py`の頻度表と`compare_batches.py`の要素比較に出ます。
 - `batch_manifest.json`の`emotional_arc`は固定指定の値です（自動のときは`null`）。固定したバッチを`--resume`するとその形を使い、別の形を指定するとエラーになります。
+
+### 劇的状況を指定する
+
+作品ごとに、プロット形式とは別の軸として、ポルティ『36の劇的状況』（1895）の状況が1つ付きます。状況は、選ばれたプロット形式と同じ意味のものを除いた中から乱数で選ばれ（`--seed`で再現できます）、`--situation N`（1〜36）を付けると全作品をその状況に固定できます。
+
+```bash
+python run_pipeline.py --situation 12 --loops 1 --pool-size 3 --no-chapters  # 固定したいときだけ
+```
+
+- 形式と同じ意味の状況（形式「復讐」と状況「罪を追う復讐」など）は、`config/story/dramatic_situations.json`の除外表に従って選びません。重なりの判断に推論（LLM）は使いません。
+- 除外表は、21個のプロット形式すべてについて、選ばない状況の番号を書きます。いま除外があるのは、ラブストーリー（28 妨げられる恋、29 敵を愛する）、ミステリー／犯罪（11 謎）、サバイバル／ディストピア（6 災厄）、復讐（3 罪を追う復讐、4 近親のための復讐）、陰謀・政治劇（8 反乱、30 野心）です。状況の本文は見出しのほか未読のため、見出しの意味で判断しています。
+- 除外表は形式の名前で引くため、プロット形式の分類で21個と一字一句同じ名前で返らなかった候補は捨てます。候補が1つも残らなければ、生成を始める前にエラーで止まります。`--plot-type`も21個のどれかに限ります。
+- `--situation`で固定した状況を除外する形式は、候補から外します。
+- 状況は、プロンプトの【物語形式】に`- **劇的状況**: 獲得（ポルティ『36の劇的状況』第12状況 Obtenir）`の形で入り、人物・プロット骨子・プロットの生成に使われます。
+- 36状況の見出しと日本語の仮訳は、仏語原典（Project Gutenberg 72036）を読んだ知識ベースの[arayashiki-culture cul-0086](https://github.com/masa-san-jp/arayashiki-culture/blob/main/entries/polti-1895-thirty-six-dramatic-situations.md)によります。
+- 各作品の状況は`metadata.json`の`selected_elements.dramatic_situation`に残り、`analyze_batch.py`の頻度表と`compare_batches.py`の要素比較に出ます。
+- `batch_manifest.json`の`dramatic_situation`は固定指定の番号です（自動のときは`null`）。固定したバッチを`--resume`するとその状況を使い、別の状況を指定するとエラーになります。
 
 ## 出力構成
 
@@ -583,7 +603,7 @@ Colab版と同等の工程（分析 → 要素プール → 世界観 → キャ
 - プロット骨子A〜Eを、選んだ構造の段から作る（[#53](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/53)）
 - 構造の異なる複数のバッチを並べて比べる `compare_batches.py`（[#54](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/54)）
 
-プロップの31機能、ポルティの36状況、ヴォネガットの感情曲線は見送り、[#55](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/55) に記録しました。感情曲線は [#61](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/61)、プロップの31機能は [#59](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/59) で加えました。
+プロップの31機能、ポルティの36状況、ヴォネガットの感情曲線は見送り、[#55](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/55) に記録しました。感情曲線は [#61](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/61)、劇的状況は [#60](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/60)、プロップの31機能は [#59](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/59) で加えました。
 
 ### 旧Colab版について
 

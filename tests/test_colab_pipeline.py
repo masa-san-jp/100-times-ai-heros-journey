@@ -50,7 +50,7 @@ class FakeClient:
         if '"roles"' in prompt:
             return {"roles": ["課題1", "課題2", "課題3"]}
         if '"plot_list"' in prompt:
-            return {"plot_list": [{"name": "旅", "core_structure": "旅の構造"}]}
+            return {"plot_list": [{"name": "旅（クエスト）", "core_structure": "旅の構造"}]}
         if '"stages"' in prompt:
             return {
                 "stages": [
@@ -101,7 +101,7 @@ def test_feature_generators_return_colab_artifacts():
     visuals = VisualPromptGenerator(client).generate(_characters())
 
     assert len(pools.wants) == 3
-    assert plot_types[0].name == "旅"
+    assert plot_types[0].name == "旅（クエスト）"
     assert world.text
     assert skeleton.part_a
     assert visuals.adversary

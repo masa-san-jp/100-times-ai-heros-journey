@@ -1,0 +1,222 @@
+{
+  "_source": "Polti, Les trente-six situations dramatiques (1895). 見出しと日本語の仮訳は arayashiki-culture cul-0086 による（第2〜36状況の本文は未読）。",
+  "_exclusions": "プロット形式（src/colab_features.py の DEFAULT_PLOT_TYPES）ごとに、同じ意味のため選ばない状況の番号。全21形式を必ず書く（空なら除外なし）。#60",
+  "situations": [
+    {
+      "number": 1,
+      "name_fr": "Implorer",
+      "name_ja": "懇願"
+    },
+    {
+      "number": 2,
+      "name_fr": "Le Sauveur",
+      "name_ja": "救済"
+    },
+    {
+      "number": 3,
+      "name_fr": "La Vengeance poursuivant le crime",
+      "name_ja": "罪を追う復讐"
+    },
+    {
+      "number": 4,
+      "name_fr": "Venger proche sur proche",
+      "name_ja": "近親のための復讐"
+    },
+    {
+      "number": 5,
+      "name_fr": "Traqué",
+      "name_ja": "追跡される"
+    },
+    {
+      "number": 6,
+      "name_fr": "Désastre",
+      "name_ja": "災厄"
+    },
+    {
+      "number": 7,
+      "name_fr": "En Proie",
+      "name_ja": "残酷や不運の餌食になる"
+    },
+    {
+      "number": 8,
+      "name_fr": "Révolte",
+      "name_ja": "反乱"
+    },
+    {
+      "number": 9,
+      "name_fr": "Audacieuse tentative",
+      "name_ja": "大胆な企て"
+    },
+    {
+      "number": 10,
+      "name_fr": "Enlèvement",
+      "name_ja": "誘拐"
+    },
+    {
+      "number": 11,
+      "name_fr": "L’Énigme",
+      "name_ja": "謎"
+    },
+    {
+      "number": 12,
+      "name_fr": "Obtenir",
+      "name_ja": "獲得"
+    },
+    {
+      "number": 13,
+      "name_fr": "Haines de proches",
+      "name_ja": "近親の憎しみ"
+    },
+    {
+      "number": 14,
+      "name_fr": "Rivalité de proches",
+      "name_ja": "近親の競い合い"
+    },
+    {
+      "number": 15,
+      "name_fr": "Adultère meurtrier",
+      "name_ja": "殺人を伴う姦通"
+    },
+    {
+      "number": 16,
+      "name_fr": "Folie",
+      "name_ja": "狂気"
+    },
+    {
+      "number": 17,
+      "name_fr": "Imprudence fatale",
+      "name_ja": "致命的な軽率"
+    },
+    {
+      "number": 18,
+      "name_fr": "Involontaire crime d’amour",
+      "name_ja": "意図せぬ愛の罪"
+    },
+    {
+      "number": 19,
+      "name_fr": "Tuer un des siens inconnu",
+      "name_ja": "それと知らず身内を殺す"
+    },
+    {
+      "number": 20,
+      "name_fr": "Se sacrifier à l’Idéal",
+      "name_ja": "理想のために身を捧げる"
+    },
+    {
+      "number": 21,
+      "name_fr": "Se sacrifier aux Proches",
+      "name_ja": "近親のために身を捧げる"
+    },
+    {
+      "number": 22,
+      "name_fr": "Tout sacrifier à la Passion",
+      "name_ja": "情熱のためにすべてを捧げる"
+    },
+    {
+      "number": 23,
+      "name_fr": "Devoir sacrifier les siens",
+      "name_ja": "身内を犠牲にせざるをえない"
+    },
+    {
+      "number": 24,
+      "name_fr": "Rivalité d’inégaux",
+      "name_ja": "身分の違う者の競い合い"
+    },
+    {
+      "number": 25,
+      "name_fr": "Adultère",
+      "name_ja": "姦通"
+    },
+    {
+      "number": 26,
+      "name_fr": "Crimes d’amour",
+      "name_ja": "愛の罪"
+    },
+    {
+      "number": 27,
+      "name_fr": "Apprendre le déshonneur d’un être aimé",
+      "name_ja": "愛する者の不名誉を知る"
+    },
+    {
+      "number": 28,
+      "name_fr": "Amours empêchées",
+      "name_ja": "妨げられる恋"
+    },
+    {
+      "number": 29,
+      "name_fr": "Aimer ennemi",
+      "name_ja": "敵を愛する"
+    },
+    {
+      "number": 30,
+      "name_fr": "L’Ambition",
+      "name_ja": "野心"
+    },
+    {
+      "number": 31,
+      "name_fr": "Lutte contre Dieu",
+      "name_ja": "神との闘い"
+    },
+    {
+      "number": 32,
+      "name_fr": "Jalousie erronée",
+      "name_ja": "誤った嫉妬"
+    },
+    {
+      "number": 33,
+      "name_fr": "Erreur judiciaire",
+      "name_ja": "誤審"
+    },
+    {
+      "number": 34,
+      "name_fr": "Remords",
+      "name_ja": "悔恨"
+    },
+    {
+      "number": 35,
+      "name_fr": "Retrouver",
+      "name_ja": "失ったものを見つける"
+    },
+    {
+      "number": 36,
+      "name_fr": "Perdre les siens",
+      "name_ja": "愛する者を失う"
+    }
+  ],
+  "exclusions": {
+    "旅（クエスト）": [],
+    "モンスターを倒す": [],
+    "成り上がり": [],
+    "再生": [],
+    "ラブストーリー": [
+      28,
+      29
+    ],
+    "ミステリー／犯罪": [
+      11
+    ],
+    "悲劇": [],
+    "帰還": [],
+    "コメディ": [],
+    "サバイバル／ディストピア": [
+      6
+    ],
+    "復讐": [
+      3,
+      4
+    ],
+    "タイムループ／時間改変": [],
+    "陰謀・政治劇": [
+      8,
+      30
+    ],
+    "人間ドラマ": [],
+    "シュルレアリスム／超現実": [],
+    "断片的構成": [],
+    "メタフィクション／ポストモダン": [],
+    "詩的・抽象的": [],
+    "哲学的／存在論的": [],
+    "ドキュメンタリー／エッセイ": [],
+    "アンチクライマックス／無為": []
+  }
+}
