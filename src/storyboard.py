@@ -122,6 +122,8 @@ class _RunInput:
     character_names: Mapping[str, str]
     visual_prompts: Mapping[str, str]
     chapter_count: Optional[int]
+    # 段ごとの性質（metadata.json の stage_roles）。無ければ None（段数ごとの並びのまま）。
+    stage_roles: Optional[Tuple[Optional[str], ...]] = None
 
 
 def _load_shot_plan() -> Mapping[str, Any]:
@@ -294,7 +296,7 @@ def _read_run_input(run_dir: Path) -> _RunInput:
         plot_context = ""
         stage_count = len(plot)
     else:
-        stage_count, manifest_label = _fallback_stage_count(run_dir)
+        stage_count, manifest_label = _fallback_stage_count(run_dir, metadata)
         plot_context = _plot_section_text(body)[:2000]
         print(
             "警告: プロット節から段階を読み取れないため、"
@@ -354,7 +356,29 @@ def _read_run_input(run_dir: Path) -> _RunInput:
         character_names={role: str(character_names[role]).strip() for role in ALLOWED_ROLES},
         visual_prompts=visual_prompts,
         chapter_count=chapter_count if isinstance(chapter_count, int) else None,
+        stage_roles=_read_stage_roles(metadata, stage_count),
     )
+
+
+def _read_stage_roles(
+    metadata: Mapping[str, Any], stage_count: int
+) -> Optional[Tuple[Optional[str], ...]]:
+    """metadata.json の段の性質を読む。無い・壊れている・段数と合わないときは None。"""
+    value = metadata.get("stage_roles")
+    if value is None:
+        return None
+    if (
+        not isinstance(value, list)
+        or len(value) != stage_count
+        or any(role is not None and role not in STAGE_ROLES for role in value)
+    ):
+        print(
+            "警告: metadata.jsonのstage_rolesが段階数と合わないか不正なため、"
+            "段数ごとのショットサイズの並びを使います。",
+            file=sys.stderr,
+        )
+        return None
+    return tuple(value)
 
 
 def _parse_title(body: str) -> str:
@@ -456,7 +480,13 @@ def _plot_section_text(body: str) -> str:
     return body[heading.end() : end]
 
 
-def _fallback_stage_count(run_dir: Path) -> Tuple[int, str]:
+def _fallback_stage_count(
+    run_dir: Path, metadata: Optional[Mapping[str, Any]] = None
+) -> Tuple[int, str]:
+    # 作品ごとに段数が変わる構造（プロップの31機能）は、runのmetadata.jsonにだけ段数がある。
+    value: Any = metadata.get("stage_count") if isinstance(metadata, Mapping) else None
+    if isinstance(value, int) and not isinstance(value, bool) and value > 0:
+        return value, "metadata.jsonのstage_count"
     manifest_path = run_dir.parent / "batch_manifest.json"
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -604,10 +634,15 @@ def _plan_stage_for_unit(
 
 
 def _shot_sizes_for_unit(
-    selected_unit: str, unit_number: int, unit_count: int, stage_count: int, shots_per_unit: int
+    selected_unit: str,
+    unit_number: int,
+    unit_count: int,
+    stage_count: int,
+    shots_per_unit: int,
+    stage_roles: Optional[Sequence[Optional[str]]] = None,
 ) -> Tuple[int, List[str]]:
     plan_stage = _plan_stage_for_unit(selected_unit, unit_number, unit_count, stage_count)
-    base_size = _stage_plan(stage_count)[plan_stage - 1]
+    base_size = _stage_plan(stage_count, stage_roles)[plan_stage - 1]
     base_index = SHOT_SIZES.index(base_size)
     sizes = []
     for shot_index in range(shots_per_unit):
@@ -633,6 +668,7 @@ def _shot_size_for_cached_shot(
         unit_count,
         source.stage_count,
         cached.shots_per_unit,
+        source.stage_roles,
     )
     return plan_stage, sizes[min(shot_index, len(sizes) - 1)]
 
@@ -734,6 +770,7 @@ def _generate_unit_shots(
         unit_count,
         source.stage_count,
         shots_per_unit,
+        source.stage_roles,
     )
     prompt = _shot_prompt(
         source,

@@ -1,7 +1,7 @@
 # 100 Times AI Hero's Journey
 
 作家の自己ナラティブから、ヒーローズ・ジャーニー形式の物語を生成するPython CLI/APIです。
-物語構造は、ヒーローズ・ジャーニー（12段・11段）、ストーリーサークル（8段）、セーブ・ザ・キャット（15段）、起承転結（4段）から選べます（[物語構造を選ぶ](#物語構造を選ぶ)）。
+物語構造は、ヒーローズ・ジャーニー（12段・11段）、ストーリーサークル（8段）、セーブ・ザ・キャット（15段）、起承転結（4段）、プロップの31機能（作品ごとに機能を選んで並べる）から選べます（[物語構造を選ぶ](#物語構造を選ぶ)）。
 標準ではOllama上のローカルモデルを使うため、入力と生成物を外部APIへ送らずに実行できます。
 
 📖 **関連記事:** [noteの記事を読む](https://note.com/masa_san_jp/n/n33dead2ffc6f)
@@ -280,7 +280,7 @@ storyboard/
 | `--provider NAME` | `ollama` | `ollama` / `openai` / `anthropic` / `deepseek` |
 | `--loops N` | `1` | 完成作品の目標数 |
 | `--pool-size N` | `100` | 願望・能力・課題の候補数 |
-| `--structure NAME` | `journey-12` | 物語構造。`journey-12` / `journey-11` / `story-circle-8` / `save-the-cat-15` / `kishotenketsu-4`（[生成される工程](#生成される工程)を参照） |
+| `--structure NAME` | `journey-12` | 物語構造。`journey-12` / `journey-11` / `story-circle-8` / `save-the-cat-15` / `kishotenketsu-4` / `propp-31`（[生成される工程](#生成される工程)を参照） |
 | `--journey-stages 11\|12` | `12` | ヒーローズ・ジャーニーの段階数（互換用。`--structure journey-11` と同じ。`--structure`と同時には指定できません） |
 | `--emotional-arc NAME` | 作品ごとに自動 | 段ごとの感情の上下を決める形を全作品で固定する。`rags-to-riches` / `tragedy` / `man-in-a-hole` / `icarus` / `cinderella` / `oedipus`（[感情曲線を指定する](#感情曲線を指定する)を参照） |
 | `--chapter-count N` | `10` | 1作品の章数 |
@@ -360,6 +360,7 @@ python run_pipeline.py --list-models
 | `story-circle-8` | ダン・ハーモンのストーリーサークル | 8 | You、Need、Go、Search、Find、Take、Return、Change |
 | `save-the-cat-15` | ブレイク・スナイダーのセーブ・ザ・キャット | 15 | Opening Image、Theme Stated、Set-Up、Catalyst、Debate、Break into Two、B Story、Fun and Games、Midpoint、Bad Guys Close In、All Is Lost、Dark Night of the Soul、Break into Three、Finale、Final Image |
 | `kishotenketsu-4` | 起承転結 | 4 | 起（導入）、承（展開）、転（転換・ひねり）、結（結果） |
+| `propp-31` | プロップ『昔話の形態学』の31の機能 | 作品ごと | 31の機能から作品ごとに選び、原典の順に並べる（[プロップの31機能](#プロップの31機能)） |
 
 ```bash
 python run_pipeline.py --structure story-circle-8 --loops 1 --pool-size 3 --no-chapters
@@ -381,6 +382,22 @@ python run_pipeline.py --structure story-circle-8 --loops 1 --pool-size 3 --no-c
   | `save-the-cat-15` | 1〜6 | 7〜9 | 10〜12 | 13〜14 | 15 |
   | `kishotenketsu-4` | 起 | 承 | 転 | 結（出来事の決着） | 結（新しい状態） |
 - ストーリーボードのショットサイズは、4・8・15段それぞれに並びを用意しています（`config/storyboard/shot_plan.json`）。
+
+#### プロップの31機能
+
+`--structure propp-31`では、作品ごとに31の機能から一部を選び、原典の順に並べてプロットの段にします。段数は作品ごとに変わります。選び方は下の規則とシード付きの乱数で決まり、LLMは使いません（`--seed`で再現できます。ほかの要素の選ばれ方は変わりません）。
+
+- 出典：В. Пропп『Морфология сказки』（Ленинград: Academia, 1928）第III章。Internet Archive の初版 OCR テキスト（https://archive.org/details/1928_20230714_202307 ）で、31の見出しと定義語を読みました。ロシア語の見出しと定義語、日本語の名前と説明（見出しからの訳）は`src/propp.py`にあります。
+- 必ず入れる機能：8（加害、または別の形の「欠如」。どちらかを半々で選ぶ）、11（出発）、19（解消）。原典は、加害か欠如はどの物語にも欠かせない、主人公は必ず家を出る、19は加害と対をなし物語の頂点になる、と書いています。
+- ほかの機能は、組ごとに半々の確率で入れます。組の中は全部入るか全部入らないかです。組は、禁止―違反（2・3）、探り―漏洩（4・5）、謀略―加担（6・7）、贈与者の試し―反応―獲得（12〜14）、闘い―勝利（16・18）、標づけ―認知（17・27）、追跡―逃げ切り（21・22）、偽の主人公の主張―暴露（24・28）、難題―解決（25・26）です。残りは1つずつです。
+- 骨子A〜Eと幕は、機能の番号で決まります。A（1〜11、第一幕）、B（12〜15、第二幕）、C（16〜19、第二幕）、D（20〜28、第三幕）、E（29〜31、第三幕）。どの部にも機能が1つも無いときは、その部の組から1つを選んで入れます。原典に幕の区分は無く、幕の割り当ては原典の「準備部（1〜7）」「発端（8〜11）」「頂点（19）」をもとに決めたものです。
+- 選んだ機能は`metadata.json`の`selected_elements.propp_functions`に`"1,8a,11,19,…"`の形で残ります。
+- ストーリーボードは、各runの`metadata.json`の`stage_roles`から段の性質を読み、最初と最後の段を引きの画、第19機能（解消）の段を close_up にします（#51 の決定5と同じ規則）。
+- 原典が書く「二つめの展開（ход）」（帰り道で兄たちに獲物を奪われ、探索をやり直す流れ）は扱いません。機能は1回ずつです。
+
+```bash
+python run_pipeline.py --structure propp-31 --loops 1 --pool-size 3 --no-chapters
+```
 
 自動評価やランキング機能は現在実装していません。
 
@@ -441,7 +458,7 @@ output/
 生成途中または失敗時には、`run_001/` に `draft.json`、`chapter_01.md`、
 `chapter_progress.json` が追加されます。これらは再開に使われ、完成後は最終成果物へ整理されます。
 `batch_manifest.json` には完了数、試行数、重複破棄数、設定（物語構造`structure`を含む）、エラー内容が記録されます。
-各runの`metadata.json`にも、使った物語構造`structure`と段数`stage_count`が記録されます。
+各runの`metadata.json`にも、使った物語構造`structure`と段数`stage_count`が記録されます。`propp-31`では段の性質`stage_roles`も記録され、`batch_manifest.json`の`journey_stage_count`は`null`になります（段数が作品ごとに違うため）。
 
 `output/` と `data/` は `.gitignore` で除外されています。共有用の完成作例は [examples/README.md](examples/README.md) を参照してください。
 
@@ -566,7 +583,7 @@ Colab版と同等の工程（分析 → 要素プール → 世界観 → キャ
 - プロット骨子A〜Eを、選んだ構造の段から作る（[#53](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/53)）
 - 構造の異なる複数のバッチを並べて比べる `compare_batches.py`（[#54](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/54)）
 
-プロップの31機能、ポルティの36状況、ヴォネガットの感情曲線は見送り、[#55](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/55) に記録しています。
+プロップの31機能、ポルティの36状況、ヴォネガットの感情曲線は見送り、[#55](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/55) に記録しました。感情曲線は [#61](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/61)、プロップの31機能は [#59](https://github.com/masa-san-jp/100-times-ai-heros-journey/issues/59) で加えました。
 
 ### 旧Colab版について
 
