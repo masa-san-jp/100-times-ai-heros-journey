@@ -195,3 +195,42 @@ class TestAvailableModels:
         for category, models in AVAILABLE_MODELS.items():
             for model in models:
                 assert isinstance(model, str), f"Model name must be str: {model}"
+
+
+@pytest.mark.parametrize(
+    "returned, expected",
+    [
+        ("旅（クエスト）", "旅（クエスト）"),
+        ("旅", "旅（クエスト）"),
+        ("旅 (Quest)", "旅（クエスト）"),
+        ("クエスト", "旅（クエスト）"),
+        ("旅（冒険）", "旅（クエスト）"),
+        ("ミステリー", "ミステリー／犯罪"),
+        ("犯罪", "ミステリー／犯罪"),
+        ("ミステリー/犯罪", "ミステリー／犯罪"),
+        ("陰謀", "陰謀・政治劇"),
+        ("政治劇", "陰謀・政治劇"),
+        ("タイムループ", "タイムループ／時間改変"),
+        ("帰還", "帰還"),
+        # 寄せられないもの
+        ("ドラマ", None),
+        ("冒険", None),
+        ("Revenge", None),
+        ("", None),
+        # 2つの正式名に当たる（曖昧）
+        ("旅／復讐", None),
+        ("復讐（旅）", None),
+    ],
+)
+def test_canonical_plot_type(returned, expected):
+    from src.colab_features import canonical_plot_type
+
+    assert canonical_plot_type(returned) == expected
+
+
+def test_full_plot_type_names_do_not_share_words():
+    # 21個の正式名どうしで同じ語を持たないこと（持てば、その語は曖昧で捨てられる）
+    from src.colab_features import DEFAULT_PLOT_TYPES, _PLOT_TYPE_INDEX, canonical_plot_type
+
+    assert all(len(names) == 1 for names in _PLOT_TYPE_INDEX.values())
+    assert [canonical_plot_type(name) for name in DEFAULT_PLOT_TYPES] == list(DEFAULT_PLOT_TYPES)

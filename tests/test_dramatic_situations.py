@@ -142,12 +142,24 @@ def test_situation_choice_is_reproducible_and_keeps_other_choices(tmp_path):
 
 
 def test_plot_type_names_outside_the_list_are_dropped(tmp_path):
-    batch = _run(tmp_path, PlotListClient(["旅", "復讐"]), variation_count=6)
+    batch = _run(tmp_path, PlotListClient(["冒険", "復讐"]), variation_count=6)
     assert _plot_type_names(batch) == {"復讐"}
 
 
+def test_short_plot_type_names_are_mapped_to_the_full_name(tmp_path):
+    # 分類器が「旅（クエスト）」を「旅」と省いて返しても、正式名で拾う
+    batch = _run(tmp_path, PlotListClient(["旅", "ミステリー"]), variation_count=8)
+    assert _plot_type_names(batch) == {"旅（クエスト）", "ミステリー／犯罪"}
+
+
+def test_ambiguous_plot_type_names_are_dropped(tmp_path):
+    # 2つの正式名に当たる名前は、どちらとも決めずに捨てる
+    batch = _run(tmp_path, PlotListClient(["旅／復讐", "コメディ"]), variation_count=6)
+    assert _plot_type_names(batch) == {"コメディ"}
+
+
 def test_no_usable_plot_type_stops_before_generation(tmp_path):
-    client = PlotListClient(["旅", "Revenge"])
+    client = PlotListClient(["冒険", "Revenge"])
     with pytest.raises(ValueError, match="no usable plot type"):
         _run(tmp_path, client)
     assert not any("主人公のキャラクタープロフィール" in p for p in client.chat_calls)

@@ -28,6 +28,7 @@ from .colab_features import (
     VisualPrompts,
     WorldGenerator,
     WorldSetting,
+    canonical_plot_type,
 )
 from . import propp
 from .dramatic_situations import DramaticSituation, situation_table
@@ -538,11 +539,25 @@ class ColabParityPipeline:
         plot_types: Tuple[PlotTypeSpec, ...],
         config: PipelineConfig,
     ) -> Tuple[PlotTypeSpec, ...]:
-        """選んでよい形式の候補。名前が21個と一字一句同じものだけを残す。"""
+        """選んでよい形式の候補。名前を21個の正式名に寄せ、寄せられないものは捨てる。
+
+        「旅」のような省略は正式名「旅（クエスト）」に寄せる（``canonical_plot_type``）。
+        正式名どおりに返った候補は、これまでと同じに扱う。
+        """
         if config.fixed_plot_type:
             return plot_types
-        candidates = tuple(item for item in plot_types if item.name in DEFAULT_PLOT_TYPES)
-        dropped = [item.name for item in plot_types if item.name not in DEFAULT_PLOT_TYPES]
+        kept = []
+        dropped = []
+        for item in plot_types:
+            name = canonical_plot_type(item.name)
+            if name is None:
+                dropped.append(item.name)
+                continue
+            if name != item.name:
+                logger.info("プロット形式の名前を正式名に寄せた: %s → %s", item.name, name)
+                item = replace(item, name=name)
+            kept.append(item)
+        candidates = tuple(kept)
         if dropped:
             logger.warning("一覧に無い名前のプロット形式を除外: %s", "、".join(dropped))
         if config.dramatic_situation is not None:
