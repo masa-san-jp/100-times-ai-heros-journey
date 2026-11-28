@@ -265,6 +265,70 @@ DEFAULT_PLOT_TYPES = (
 )
 
 
+# 分類器（LLM）が形式名を省略・表記ゆれで返したときに、21個の正式名へ寄せるための規則。
+# 推論は使わず、文字列の決まった分け方だけで対応づける。
+_PAREN_PAIRS = str.maketrans({"(": "（", ")": "）", "/": "／"})
+_PAREN_SPLIT = ("（", "）")
+_WORD_SEPARATORS = ("／", "・")
+
+
+def _normalize_plot_type_name(name: str) -> str:
+    """空白を除き、半角の括弧・スラッシュを全角にそろえる。"""
+    return "".join(str(name).split()).translate(_PAREN_PAIRS)
+
+
+def _plot_type_name_parts(name: str) -> Tuple[str, ...]:
+    """名前を、括弧の前・括弧の中・「／」「・」で分けた語に分ける。
+
+    例：「旅（クエスト）」→ 旅（クエスト）、旅、クエスト
+        「ミステリー／犯罪」→ ミステリー／犯罪、ミステリー、犯罪
+    """
+    normalized = _normalize_plot_type_name(name)
+    parts = [normalized]
+    before, sep, rest = normalized.partition(_PAREN_SPLIT[0])
+    inside = rest.split(_PAREN_SPLIT[1], 1)[0] if sep else ""
+    for chunk in (before, inside):
+        if not chunk:
+            continue
+        parts.append(chunk)
+        pieces = [chunk]
+        for separator in _WORD_SEPARATORS:
+            pieces = [piece for item in pieces for piece in item.split(separator)]
+        parts.extend(piece for piece in pieces if piece)
+    return tuple(dict.fromkeys(parts))
+
+
+def _plot_type_index(names: Tuple[str, ...]) -> Dict[str, frozenset]:
+    """語 → その語を持つ正式名の集合。"""
+    index: Dict[str, set] = {}
+    for name in names:
+        for part in _plot_type_name_parts(name):
+            index.setdefault(part, set()).add(name)
+    return {part: frozenset(found) for part, found in index.items()}
+
+
+_PLOT_TYPE_INDEX = _plot_type_index(DEFAULT_PLOT_TYPES)
+
+
+def canonical_plot_type(name: str) -> Optional[str]:
+    """分類器が返した形式名を、21個の正式名に寄せる。寄せられなければ None。
+
+    - 正式名と一字一句同じ名前は、そのまま返す。
+    - それ以外は、返った名前を括弧の前・括弧の中・「／」「・」で分けた語を
+      正式名の同じ分け方の語と照らし、当たった正式名がちょうど1つならそれを返す。
+      「旅」「旅 (Quest)」「クエスト」は「旅（クエスト）」になる。
+    - 当たった正式名が2つ以上（曖昧）か、1つも無ければ None（候補から捨てる）。
+    """
+    if name in DEFAULT_PLOT_TYPES:
+        return name
+    found: set = set()
+    for part in _plot_type_name_parts(name):
+        found.update(_PLOT_TYPE_INDEX.get(part, ()))
+    if len(found) == 1:
+        return next(iter(found))
+    return None
+
+
 class PlotTypeClassifier:
     """ナラティブに合うプロット形式の分類結果を生成する。"""
 
